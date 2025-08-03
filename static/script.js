@@ -1,3 +1,3 @@
 function greet() {
-    document.getElementById("greeting").innerText = "Hello, World!";
+    document.getElementById("greeting").innerText = "Murf AI, Day-1 Completed";
 }
