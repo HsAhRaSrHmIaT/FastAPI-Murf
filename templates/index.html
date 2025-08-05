@@ -3,25 +3,140 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>FastAPI & Gemini</title>
+        <title>FastAPI & MurfAI</title>
         <script src="https://cdn.tailwindcss.com"></script>
-    </head> 
+    </head>
     <body class="bg-gray-900 text-white">
         <div class="min-h-screen flex items-center justify-center">
-            <div class="bg-gray-800 bg-opacity-50 backdrop-filter backdrop-blur-xl p-8 rounded-2xl shadow-2xl border border-gray-700 max-w-md w-full text-center">
-                <h1 class="text-4xl font-bold mb-2">
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-                        Welcome to AI Agent
-                    </span>
+            <div
+                class="bg-gray-800 bg-opacity-50 backdrop-filter backdrop-blur-xl p-8 rounded-2xl shadow-2xl border border-gray-700 max-w-md w-full text-center"
+            >
+                <h1 class="text-4xl font-bold mb-2 select-none">
+                    🎙️Text to Speech
                 </h1>
-                <p class="text-gray-400 mb-6">This is the beginning of building a voice agent.</p>
-                <button onclick="greet()" class="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out">
-                    Click Me
-                </button>
-                <p id="greeting" class="mt-6 text-lg text-green-400 font-semibold">Initial Message</p>
-            </div>
-        </div>
+                <p class="mb-4 text-gray-400 select-none">
+                    Transform your text into speech
+                </p>
+                <form id="ttsForm" class="flex flex-col items-center">
+                    <textarea
+                        id="userInput"
+                        class="w-full h-36 p-2 mb-4 border border-gray-700 rounded-lg bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        rows="4"
+                        placeholder="Enter your text..."
+                        style="
+                            scrollbar-width: thin;
+                            scrollbar-color: #4f46e5 transparent;
+                        "
+                        required
+                    ></textarea>
+                    <button
+                        id="submitBtn"
+                        class="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out flex items-center justify-center gap-2 w-fit mx-auto"
+                        type="submit"
+                    >
+                        <span id="btnText">Generate Speech</span>
+                        <span
+                            id="btnLoader"
+                            class="loader hidden animate-spin border-2 border-t-transparent border-white rounded-full w-4 h-4"
+                        ></span>
+                    </button>
+                </form>
 
-        <script src="/static/script.js"></script>
+                <div id="audio-container" class="mt-6 flex justify-center">
+                    <audio id="audioPlayer" controls autoplay>
+                        <source id="audioSource" src="" type="audio/mpeg" />
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+
+                <div class="border-t border-gray-700 mt-6 pt-6">
+                    <h2 class="text-2xl font-bold mb-4 text-center select-none">
+                        Echo Bot
+                    </h2>
+                    <div class="flex gap-4 justify-center">
+                        <button
+                            id="record"
+                            class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            Record
+                        </button>
+                        <button
+                            id="stop"
+                            class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            Stop
+                        </button>
+                        <button
+                            id="reset"
+                            class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                    <div id="record-container" class="mt-4 flex justify-center">
+                        <audio id="recordedAudio" controls>
+                            <source id="recordedAudioSource" src="" type="audio/ogg" />
+                        </audio>
+                    </div>
+                </div>
+            </div>
+
+        <script src="static/script.js"></script>
+        <script>
+            if (navigator.mediaDevices) {
+
+                const constraints = { audio: true };
+                let chunks = [];
+
+                navigator.mediaDevices
+                    .getUserMedia(constraints)
+                    .then((stream) => {
+                        const mediaRecorder = new MediaRecorder(stream);
+                        const record = document.getElementById("record");
+                        const stop = document.getElementById("stop");
+                        const reset = document.getElementById("reset");
+                        const audioPlayer =
+                            document.getElementById("recordedAudio");
+                        const audioSource =
+                            document.getElementById("recordedAudioSource");
+
+                        record.onclick = () => {
+                            chunks = [];
+                            mediaRecorder.start();
+                            record.classList.add("opacity-50");
+                        };
+
+                        stop.onclick = () => {
+                            mediaRecorder.stop();
+                            record.classList.remove("opacity-50");
+                        };
+
+                        reset.onclick = () => {
+                            chunks = [];
+                            audioSource.src = "";
+                            audioPlayer.load();
+                            record.classList.remove("opacity-50");
+                        };
+
+                        mediaRecorder.ondataavailable = (e) => {
+                            chunks.push(e.data);
+                        };
+
+                        mediaRecorder.onstop = () => {
+                            const blob = new Blob(chunks, {
+                                type: "audio/ogg; codecs=opus",
+                            });
+                            const audioURL = URL.createObjectURL(blob);
+
+                            audioSource.src = audioURL;
+                            audioPlayer.load();
+                            audioPlayer.play();
+                        };
+                    })
+                    .catch((err) => {
+                        console.error("The following error occurred: " + err);
+                    });
+            }
+        </script>
     </body>
 </html>
