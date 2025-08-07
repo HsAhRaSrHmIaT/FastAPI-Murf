@@ -7,6 +7,7 @@ import requests
 import dotenv
 import os
 import time
+import assemblyai as aai
 
 dotenv.load_dotenv()
 
@@ -14,6 +15,9 @@ app = FastAPI()
 
 MURF_API_KEY = os.getenv("MURF_API_KEY")
 MURF_API_URL = os.getenv("MURF_API_URL")
+ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
+
+aai.settings.api_key = ASSEMBLYAI_API_KEY
 
 # print(f"MURF_API_KEY: {MURF_API_KEY}")
 # print(f"MURF_API_URL: {MURF_API_URL}")
@@ -108,3 +112,46 @@ def upload_file(file: UploadFile = File(...)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/transcribe-file")
+def transcribe_file(file: UploadFile = File(...)):
+    """
+    Endpoint to transcribe audio files using AssemblyAI.
+    Accepts audio files and returns transcription text.
+    """
+    try:
+        # Validate file type
+        allowed_types = [
+            "audio/wav", "audio/mpeg", "audio/mp3", 
+            "audio/webm", "audio/ogg", "audio/mp4",
+            "audio/webm;codecs=opus", "audio/ogg;codecs=opus"
+        ]
+        
+        main_content_type = file.content_type.split(";")[0] if file.content_type else ""
+        if main_content_type not in ["audio/wav", "audio/mpeg", "audio/mp3", "audio/webm", "audio/ogg", "audio/mp4"]:
+            raise HTTPException(status_code=400, detail=f"Invalid file type: {file.content_type}")
+        
+        # Read the audio file content
+        audio_data = file.file.read()
+        
+        # Create a transcriber instance
+        transcriber = aai.Transcriber()
+        
+        # Transcribe the audio data directly (no need to save to disk)
+        transcript = transcriber.transcribe(audio_data)
+        
+        if transcript.status == aai.TranscriptStatus.error:
+            raise HTTPException(status_code=500, detail=f"Transcription failed: {transcript.error}")
+        
+        return {
+            "transcription": transcript.text,
+            "confidence": round(transcript.confidence * 100, 2) if hasattr(transcript, 'confidence') else None,
+            "audio_duration": round(transcript.audio_duration, 2) if hasattr(transcript, 'audio_duration') else None,
+            "filename": file.filename,
+            "message": "Transcription completed successfully"
+        }
+        
+    except Exception as e:
+        print(f"Transcription error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
