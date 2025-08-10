@@ -10,23 +10,21 @@
     <body
         class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white min-h-screen"
     >
-        <!-- Header -->
-        <header class="text-center py-8">
+        <header class="text-center py-4">
             <h1
-                class="text-5xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2"
+                class="text-3xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2"
             >
-                🎙️ Voice Assistant
+                🎙️ Voice Agent
             </h1>
-            <p class="text-xl text-gray-300">
-                Speak, Transcribe, and Generate Speech
-            </p>
         </header>
 
-        <div class="container mx-auto px-4 max-w-6xl">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="container mx-auto">
+            <div
+                class="flex justify-center items-start gap-6 max-w-5xl mx-auto"
+            >
                 <!-- Text to Speech Section -->
-                <div
-                    class="bg-white/10 backdrop-blur-lg p-8 rounded-3xl shadow-2xl border border-white/20 hover:border-purple-400/50 transition-all duration-300 hover:border-red-400/50"
+                <!-- <div
+                    class="bg-white/10 backdrop-blur-lg p-8 rounded-3xl shadow-2xl border border-white/20 hover:border-purple-400/50 transition-all duration-300 flex-1 max-w-md"
                 >
                     <div class="text-center mb-6">
                         <div
@@ -39,14 +37,12 @@
                                 viewBox="0 0 24 24"
                                 xmlns="http://www.w3.org/2000/svg"
                             >
-                                <!-- Speaker cone -->
                                 <polygon
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                     stroke-width="2"
                                     points="11,5 6,9 2,9 2,15 6,15 11,19 11,5"
                                 />
-                                <!-- Sound waves -->
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
@@ -104,14 +100,12 @@
                                 viewBox="0 0 24 24"
                                 xmlns="http://www.w3.org/2000/svg"
                             >
-                                <!-- Speaker cone -->
                                 <polygon
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                     stroke-width="2"
                                     points="11,5 6,9 2,9 2,15 6,15 11,19 11,5"
                                 />
-                                <!-- Sound waves -->
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
@@ -173,10 +167,10 @@
                             </audio>
                         </div>
                     </div>
-                </div>
+                </div> -->
                 <!-- Voice Recording & Transcription Section -->
                 <div
-                    class="bg-white/10 backdrop-blur-lg p-8 rounded-3xl shadow-2xl border border-white/20 hover:border-red-400/50 transition-all duration-300"
+                    class="bg-white/10 backdrop-blur-lg p-8 rounded-3xl shadow-2xl border border-white/20 hover:border-red-400/50 transition-all duration-300 flex-1 max-w-md"
                 >
                     <div class="text-center mb-6">
                         <div
@@ -197,15 +191,15 @@
                             </svg>
                         </div>
                         <h2 class="text-2xl font-bold text-white mb-2">
-                            Voice Assistant
+                            Echo Bot v3 - AI Voice Echo
                         </h2>
                         <p class="text-gray-300">
-                            Record your voice and get instant transcription
+                            Record your voice, get response, and hear it
+                            back in AI voice
                         </p>
                     </div>
 
                     <div class="space-y-6">
-                        <!-- Recording Controls -->
                         <div class="flex justify-center gap-4">
                             <button
                                 id="record"
@@ -243,10 +237,8 @@
                                 Reset
                             </button>
                         </div>
-
-                        <!-- Audio Player -->
                         <div
-                            id="record-container"
+                            id="audio-container"
                             class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10"
                         >
                             <h3
@@ -265,30 +257,26 @@
                                         d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
                                     ></path>
                                 </svg>
-                                Recorded Audio
+                                Recorded Audio (Prompt)
                             </h3>
                             <audio
-                                id="recordedAudio"
+                                id="audioPlayer"
                                 controls
                                 class="w-full"
                                 style="filter: hue-rotate(350deg) saturate(2)"
                             >
                                 <source
-                                    id="recordedAudioSource"
+                                    id="audioSource"
                                     src=""
                                     type="audio/ogg"
                                 />
                             </audio>
                         </div>
-
-                        <!-- Status Display -->
                         <div
                             id="uploadStatus"
-                            class="hidden rounded-xl p-4 text-sm font-medium border backdrop-blur-sm"
+                            class="hidden rounded-xl p-4 text-sm font-medium border backdrop-blur-sm bg-white/5 border-white/10"
                         ></div>
-
-                        <!-- Permanent Transcription Container -->
-                        <div
+                        <!-- <div
                             class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 mt-6"
                         >
                             <h3
@@ -309,11 +297,13 @@
                                 </svg>
                                 Transcription Result
                             </h3>
-                            <!-- Fixed height container with individual scrollbar -->
                             <div
                                 id="transcriptionContainer"
                                 class="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-400/20 rounded-lg p-4 min-h-[70px] max-h-[90px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-400/50 scrollbar-track-purple-200/20"
-                                style="scrollbar-width: thin; scrollbar-color: #410266 transparent;"
+                                style="
+                                    scrollbar-width: thin;
+                                    scrollbar-color: #410266 transparent;
+                                "
                             >
                                 <div
                                     id="transcriptionContent"
@@ -323,10 +313,49 @@
                                     here...
                                 </div>
                             </div>
+                        </div> -->
+                        <div id="ai-audio-container" class="mt-8">
+                            <div
+                                class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10"
+                            >
+                                <h3
+                                    class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2"
+                                >
+                                    <svg
+                                        class="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                                        ></path>
+                                    </svg>
+                                    Generated Audio (Response)
+                                </h3>
+                                <audio
+                                    id="aiAudioPlayer"
+                                    controls
+                                    class="w-full"
+                                    style="
+                                        filter: hue-rotate(270deg) saturate(2);
+                                    "
+                                >
+                                    <source
+                                        id="aiAudioSource"
+                                        src=""
+                                        type="audio/mpeg"
+                                    />
+                                    Your browser does not support the audio
+                                    element.
+                                </audio>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Metadata section -->
                     <div
                         id="transcriptionMeta"
                         class="mt-3 text-xs text-gray-400 hidden"
