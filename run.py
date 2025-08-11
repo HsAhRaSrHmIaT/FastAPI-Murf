@@ -1,9 +1,10 @@
+from email.mime import audio
 from fastapi import FastAPI, Request, File, UploadFile, HTTPException, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict, List
 
 import google.generativeai as genai
 import requests
@@ -11,6 +12,7 @@ import dotenv
 import os
 import time
 import assemblyai as aai
+import uuid
 
 
 dotenv.load_dotenv()
@@ -34,6 +36,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 templates = Jinja2Templates(directory="templates")
+
+chat_sessions: Dict[str, List[Dict[str, str]]] = {}
 
 
 class SpeechRequest(BaseModel):
@@ -305,3 +309,113 @@ def llm_query(
     except Exception as e:
         print(f"LLM query error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"LLM query failed: {str(e)}")
+    
+@app.post("/agent/chat/{session_id}")
+def agent_chat(
+    session_id: str,
+    file: Optional[UploadFile] = File(None),
+):
+    try:
+        if not file:
+            raise HTTPException(status_code=400, detail="No file provided for chat session")
+        
+        main_content_type = file.content_type.split(";")[0] if file.content_type else ""
+        allowed_types = ["audio/wav", "audio/mpeg", "audio/mp3", "audio/webm", "audio/ogg", "audio/mp4"]
+
+        if main_content_type not in allowed_types:
+            raise HTTPException(status_code=400, detail=f"Invalid file type: {file.content_type}")
+
+        audio_data = file.file.read()
+        transcriber = aai.Transcriber()
+        transcript = transcriber.transcribe(audio_data)
+
+        if transcript.status == aai.TranscriptStatus.error:
+            raise HTTPException(status_code=500, detail=f"Transcription failed: {transcript.error}")
+
+        user_message = transcript.text
+        if not user_message or user_message.strip() == "":
+            raise HTTPException(status_code=400, detail="No valid user message detected")
+        
+        if session_id not in chat_sessions:
+            chat_sessions[session_id] = []
+
+        chat_sessions[session_id].append({"role": "user", "content": user_message})
+        
+        messages = []
+        for message in chat_sessions[session_id]:
+            messages.append(f"{message['role'].title()}: {message['content']}")
+        
+        conversation_text = "\n".join(messages)
+        system_prompt = (
+            "You are a helpful assistant. You need to respond formally and straightforwardly. "
+            "No need to reply for stupid questions. Just informative questions can be asked by the user. "
+            "Here is the conversation history:\n"
+        )
+        
+        full_prompt = system_prompt + conversation_text
+        
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(full_prompt)
+
+        assistant_message = response.text
+
+        chat_sessions[session_id].append({"role": "assistant", "content": assistant_message})
+
+        speech_payload = {
+            "text": assistant_message,
+            "voice_id": "en-IN-arohi",
+            "language": "en-IN"
+        }
+
+        headers = {
+            "api-key": MURF_API_KEY,
+            "Content-Type": "application/json"
+        }
+
+        tts_response = requests.post(MURF_API_URL, headers=headers, json=speech_payload)
+
+        if tts_response.status_code != 200:
+            raise HTTPException(
+                status_code=tts_response.status_code, 
+                detail=f"TTS generation failed: {tts_response.text}"
+            )
+
+        tts_result = tts_response.json()
+        audio_url = tts_result.get("audioFile")
+        
+        if not audio_url:
+            raise HTTPException(status_code=500, detail="No audio URL received from TTS service")
+        
+        return {
+            "session_id": session_id,
+            "audio_url": audio_url,
+            "user_message": user_message,
+            "assistant_response": assistant_message,
+            "chat_history_length": len(chat_sessions[session_id]),
+            "input_type": "audio"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Agent chat error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Agent chat failed: {str(e)}")
+
+@app.get("/agent/chat/{session_id}/history")
+def get_chat_history(session_id: str):
+    """Get chat history for a session"""
+    if session_id not in chat_sessions:
+        return {"session_id": session_id, "messages": []}
+    
+    return {
+        "session_id": session_id, 
+        "messages": chat_sessions[session_id]
+    }
+
+@app.delete("/agent/chat/{session_id}")
+def clear_chat_history(session_id: str):
+    """Clear chat history for a session"""
+    if session_id in chat_sessions:
+        del chat_sessions[session_id]
+    
+    return {"message": f"Chat history cleared for session {session_id}"}

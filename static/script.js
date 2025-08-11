@@ -120,6 +120,32 @@
 if (navigator.mediaDevices) {
     const constraints = { audio: true };
     let chunks = [];
+    let sessionId = null;
+    let isAutoRecording = false;
+
+    // Get or create session ID from URL params
+    function getSessionId() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let sessionId = urlParams.get("session");
+
+        if (!sessionId) {
+            sessionId =
+                "session_" +
+                Date.now() +
+                "_" +
+                Math.random().toString(36).substr(2, 9);
+            urlParams.set("session", sessionId);
+            window.history.replaceState(
+                {},
+                "",
+                `${window.location.pathname}?${urlParams}`
+            );
+        }
+
+        return sessionId;
+    }
+
+    sessionId = getSessionId();
 
     navigator.mediaDevices
         .getUserMedia(constraints)
@@ -135,11 +161,25 @@ if (navigator.mediaDevices) {
 
             let progressSteps = [];
 
-            record.onclick = () => {
+            // Auto-start recording after AI response ends
+            aiAudioPlayer.addEventListener("ended", () => {
+                if (isAutoRecording) {
+                    setTimeout(() => {
+                        startRecording();
+                    }, 1000); // Wait 1 second before auto-recording
+                }
+            });
+
+            function startRecording() {
                 chunks = [];
                 mediaRecorder.start();
                 record.classList.add("opacity-50");
                 initializeProgress("Recording...");
+            }
+
+            record.onclick = () => {
+                isAutoRecording = true; // Enable auto-recording for subsequent interactions
+                startRecording();
             };
 
             stop.onclick = () => {
@@ -149,6 +189,7 @@ if (navigator.mediaDevices) {
             };
 
             reset.onclick = () => {
+                isAutoRecording = false; // Disable auto-recording
                 chunks = [];
                 audioSource.src = "";
                 audioPlayer.load();
@@ -156,7 +197,17 @@ if (navigator.mediaDevices) {
                 aiAudioPlayer.load();
                 record.classList.remove("opacity-50");
                 clearProgress();
-                clearTranscription();
+
+                // Clear chat history on server
+                fetch(`/agent/chat/${sessionId}`, {
+                    method: "DELETE",
+                })
+                    .then(() => {
+                        console.log("Chat history cleared");
+                    })
+                    .catch((err) => {
+                        console.error("Failed to clear chat history:", err);
+                    });
             };
 
             mediaRecorder.ondataavailable = (e) => {
@@ -179,81 +230,36 @@ if (navigator.mediaDevices) {
             };
 
             async function uploadAudio(audioBlob) {
-                addProgressStep("Transcribing and generating response...");
-
-                // updateUploadStatus(
-                //     "Step 1/3: Transcribing and generating response...",
-                //     "info"
-                // );
+                addProgressStep("Processing with chat history...");
 
                 const formData = new FormData();
                 formData.append("file", audioBlob, "question.webm");
 
                 try {
-                    // Send to LLM query endpoint
-                    const llmResponse = await fetch("/llm/query", {
-                        method: "POST",
-                        body: formData,
-                    });
+                    // Send to new chat endpoint with session ID
+                    const chatResponse = await fetch(
+                        `/agent/chat/${sessionId}`,
+                        {
+                            method: "POST",
+                            body: formData,
+                        }
+                    );
 
-                    if (llmResponse.ok) {
-                        const result = await llmResponse.json();
-                        console.log("LLM Query Result:", result);
+                    if (chatResponse.ok) {
+                        const result = await chatResponse.json();
+                        console.log("Chat Result:", result);
 
                         updateProgressStep(
                             1,
-                            "AI response generated",
+                            `AI response generated (History: ${result.chat_history_length} messages)`,
                             "success"
                         );
-                        addProgressStep(
-                            "Generating speech from AI response..."
-                        );
-                        // updateUploadStatus(
-                        //     "Step 2/3: LLM Generating speech from AI response...",
-                        //     "success"
-                        // );
-
-                        const ttsResponse = await fetch("/generate-speech", {
-                            method: "POST",
-                            body: JSON.stringify({
-                                text: result.response,
-                            }),
-                            headers: {
-                                "Content-Type": "application/json",
-                            },
-                        });
-
-                        if (!ttsResponse.ok) {
-                            console.error(
-                                "TTS generation failed:",
-                                await ttsResponse.text()
-                            );
-                            updateProgressStep(
-                                2,
-                                "TTS generation failed",
-                                "error"
-                            );
-                            return;
-                        }
-
-                        const ttsResult = await ttsResponse.json();
-                        console.log("TTS Generation Result:", ttsResult);
-
-                        updateProgressStep(
-                            2,
-                            "Generated speech from AI response",
-                            "success"
-                        );
-                        // updateUploadStatus(
-                        //     `Step 3/3: Generated speech from AI response...`,
-                        //     "success"
-                        // );
+                        addProgressStep("Playing AI response...");
 
                         if (aiAudioSource && aiAudioPlayer) {
-                            aiAudioSource.src = ttsResult.audio_url;
+                            aiAudioSource.src = result.audio_url;
                             aiAudioPlayer.load();
 
-                            // Add event listeners for debugging
                             aiAudioPlayer.onloadeddata = () =>
                                 console.log("AI speech loaded successfully");
                             aiAudioPlayer.onerror = (e) =>
@@ -265,158 +271,99 @@ if (navigator.mediaDevices) {
                                 .play()
                                 .then(() => {
                                     console.log("AI speech playback started");
+                                    updateProgressStep(
+                                        2,
+                                        "Playing AI response...",
+                                        "success"
+                                    );
                                 })
                                 .catch((e) => {
                                     console.error(
                                         "AI speech playback failed:",
                                         e
                                     );
+                                    updateProgressStep(
+                                        2,
+                                        "Playback failed",
+                                        "error"
+                                    );
                                 });
                         } else {
-                            console.error("Audio elements not found:", {
-                                aiAudioSource: !!aiAudioSource,
-                                aiAudioPlayer: !!aiAudioPlayer,
-                            });
+                            console.error("Audio elements not found");
                         }
                     } else {
-                        const errorData = await llmResponse.json();
+                        const errorData = await chatResponse.json();
                         updateProgressStep(
                             1,
-                            `LLM Query failed: ${errorData.detail}`,
+                            `Chat failed: ${errorData.detail}`,
                             "error"
                         );
                     }
                 } catch (err) {
-                    console.error("Voice-to-voice chat error:", err);
+                    console.error("Chat error:", err);
                     updateProgressStep(
                         1,
-                        "Voice-to-voice chat failed: Network error",
+                        "Chat failed: Network error",
                         "error"
                     );
                 }
             }
 
-            // Function to display transcription
-            // function displayTranscription(text) {
-            //     const transcriptionContent = document.getElementById(
-            //         "transcriptionContent"
-            //     );
+            // Progress tracking functions
+            function initializeProgress(initialStep) {
+                progressSteps = [initialStep];
+                updateProgressDisplay();
+            }
 
-            //     if (transcriptionContent && text) {
-            //         // Update the content in the existing container
-            //         transcriptionContent.innerHTML = `
-            //             <p class="text-white text-base leading-relaxed">"${text}"</p>
-            //         `;
+            function addProgressStep(stepText) {
+                progressSteps.push(stepText);
+                updateProgressDisplay();
+            }
 
-            //         // Auto-scroll to bottom if content overflows
-            //         const container = document.getElementById(
-            //             "transcriptionContainer"
-            //         );
-            //         if (container) {
-            //             container.scrollTop = container.scrollHeight;
-            //         }
-            //     }
-            // }
-
-            // Function to clear transcription
-            function clearTranscription() {
-                const transcriptionContent = document.getElementById(
-                    "transcriptionContent"
-                );
-
-                if (transcriptionContent) {
-                    transcriptionContent.innerHTML = `
-                        <div class="text-gray-400 text-sm text-center italic">
-                            Record audio to see generated results here...
-                        </div>
-                    `;
+            function updateProgressStep(stepIndex, newText, status = "info") {
+                if (stepIndex < progressSteps.length) {
+                    progressSteps[stepIndex] = newText;
+                    updateProgressDisplay(status);
                 }
             }
 
-            function initializeProgress(message) {
-                progressSteps = [{ message, type: "info" }];
-                renderProgress();
-            }
+            function updateProgressDisplay(status = "info") {
+                const uploadStatus = document.getElementById("uploadStatus");
+                if (uploadStatus) {
+                    uploadStatus.classList.remove("hidden");
 
-            function addProgressStep(message, type = "info") {
-                progressSteps.push({ message, type });
-                renderProgress();
-            }
+                    let statusClass =
+                        "bg-blue-500/10 border-blue-400/20 text-blue-300";
+                    if (status === "success") {
+                        statusClass =
+                            "bg-green-500/10 border-green-400/20 text-green-300";
+                    } else if (status === "error") {
+                        statusClass =
+                            "bg-red-500/10 border-red-400/20 text-red-300";
+                    }
 
-            function updateProgressStep(index, message, type = "info") {
-                if (index < 0 || index >= progressSteps.length) return;
-                progressSteps[index] = { message, type };
-                renderProgress();
+                    uploadStatus.className = `rounded-xl p-4 text-sm font-medium border backdrop-blur-sm ${statusClass}`;
+                    uploadStatus.innerHTML = progressSteps
+                        .map(
+                            (step, index) =>
+                                `<div class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-current rounded-full opacity-60"></div>
+                            ${step}
+                        </div>`
+                        )
+                        .join("");
+                }
             }
 
             function clearProgress() {
+                const uploadStatus = document.getElementById("uploadStatus");
+                if (uploadStatus) {
+                    uploadStatus.classList.add("hidden");
+                }
                 progressSteps = [];
-                const statusElement = document.getElementById("uploadStatus");
-                if (statusElement) {
-                    statusElement.classList.add("hidden");
-                }
             }
-
-            function renderProgress() {
-                const statusElement = document.getElementById("uploadStatus");
-                if (statusElement && progressSteps.length > 0) {
-                    statusElement.classList.remove("hidden");
-                    
-                    const stepsHtml = progressSteps.map((step, index) => {
-                        const emoji = step.type === "success" ? "✅" :step.type === "error" ? "❌" : "🔄";
-
-                        const textClass = step.type === "success" ? "text-green-300" : step.type === "error" ? "text-red-300" : "text-blue-300";
-
-                        return `
-                            <div class="flex items-center mb-1">
-                                <span class="mr-2">${emoji}</span>
-                                <span class="${textClass}">${step.message}</span>
-                            </div>
-                        `;
-                    }).join("");
-
-                    statusElement.innerHTML = stepsHtml;
-                    statusElement.className = `rounded-xl p-4 text-sm font-medium border backdrop-blur-sm bg-white/5 text-gray-300 border-white/10`;
-                }
-            }
-
-            // Status update function
-            // function updateUploadStatus(message, type) {
-            //     let statusElement = document.getElementById("uploadStatus");
-            //     if (statusElement) {
-            //         if (message === "" && type === "") {
-            //             statusElement.classList.add("hidden");
-            //             return;
-            //         }
-
-            //         statusElement.classList.remove("hidden");
-            //         statusElement.innerHTML = message;
-            //         statusElement.className = `rounded-xl p-4 text-sm font-medium border backdrop-blur-sm ${getStatusClass(
-            //             type
-            //         )}`;
-            //     }
-            // }
-
-            // function getStatusClass(type) {
-            //     switch (type) {
-            //         case "info":
-            //             return "bg-blue-500/20 text-blue-300 border-blue-400/30";
-            //         case "success":
-            //             return "bg-green-500/20 text-green-300 border-green-400/30";
-            //         case "error":
-            //             return "bg-red-500/20 text-red-300 border-red-400/30";
-            //         default:
-            //             return "hidden";
-            //     }
-            // }
         })
         .catch((err) => {
-            console.error("The following error occurred: " + err);
-            initializeProgress("Error accessing microphone");
-            updateProgressStep(
-                0,
-                "Microphone access failed: " + err.message,
-                "error"
-            );
+            console.error("Error accessing microphone:", err);
         });
 }
