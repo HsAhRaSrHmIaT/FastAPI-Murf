@@ -12,8 +12,7 @@ import dotenv
 import os
 import time
 import assemblyai as aai
-import uuid
-
+# import uuid
 
 dotenv.load_dotenv()
 
@@ -25,6 +24,75 @@ ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 aai.settings.api_key = ASSEMBLYAI_API_KEY
+
+
+def generate_fallback_response(transcription_error=None, llm_error=None, tts_error=None):
+    if transcription_error and llm_error and tts_error:
+        return "I'm experiencing technical difficulties. Please try again later."
+    elif transcription_error and llm_error:
+        return "I'm having trouble understanding your audio and processing requests right now. Please try again later."
+    elif transcription_error and tts_error:
+        return "I'm having trouble with audio processing right now. Please try again later."
+    elif llm_error and tts_error:
+        return "I'm having trouble processing and responding to requests right now. Please try again later."
+    elif transcription_error:
+        return "I'm having trouble understanding the audio right now. Please try again or speak more clearly."
+    elif llm_error:
+        return "I'm having trouble processing your request right now. Please try again later."
+    elif tts_error:
+        return "I'm having trouble generating audio responses right now, but I can still process your requests."
+    else:
+        return "I'm having some technical difficulties right now. Please try again later."
+
+def check_api_health():
+    missing_keys = []
+    if not MURF_API_KEY:
+        missing_keys.append("MURF_API_KEY")
+    if not MURF_API_URL:
+        missing_keys.append("MURF_API_URL")
+    if not ASSEMBLYAI_API_KEY:
+        missing_keys.append("ASSEMBLYAI_API_KEY")
+    if not os.getenv("GOOGLE_API_KEY"):
+        missing_keys.append("GOOGLE_API_KEY")
+
+    return missing_keys
+
+@app.get("/health")
+def health_check():
+    missing_keys = check_api_health()
+    return {
+        "status": "healthy" if not missing_keys else "degraded",
+        "missing_api_keys": missing_keys,
+        "timestamp": time.time()
+    }
+
+@app.get("/test/errors") 
+def test_error_scenarios():
+    """Test endpoint to simulate different error scenarios"""
+    # Check which services have issues
+    stt_working = bool(ASSEMBLYAI_API_KEY)
+    llm_working = bool(os.getenv("GOOGLE_API_KEY"))
+    tts_working = bool(MURF_API_KEY and MURF_API_URL)
+    
+    # Only generate fallback message if there are actual errors
+    fallback_message = None
+    if not stt_working or not llm_working or not tts_working:
+        fallback_message = generate_fallback_response(
+            transcription_error="STT failed" if not stt_working else None,
+            llm_error="LLM failed" if not llm_working else None,
+            tts_error="TTS failed" if not tts_working else None
+        )
+    else:
+        fallback_message = "All systems operational - no fallback needed"
+    
+    return {
+        "stt_test": "working" if stt_working else "missing_key",
+        "llm_test": "working" if llm_working else "missing_key", 
+        "tts_test": "working" if tts_working else "missing_key",
+        "overall_status": "healthy" if (stt_working and llm_working and tts_working) else "degraded",
+        "fallback_message": fallback_message
+    }
+
 
 # print(f"MURF_API_KEY: {MURF_API_KEY}")
 # print(f"MURF_API_URL: {MURF_API_URL}")
@@ -245,10 +313,6 @@ def llm_query(
     prompt: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None)
 ):
-    """
-    LLM query endpoint that accepts either text prompt or audio file.
-    If audio is provided, it will be transcribed first.
-    """
     try:
         final_prompt = ""
         transcription = None
@@ -325,81 +389,139 @@ def agent_chat(
         if main_content_type not in allowed_types:
             raise HTTPException(status_code=400, detail=f"Invalid file type: {file.content_type}")
 
-        audio_data = file.file.read()
-        transcriber = aai.Transcriber()
-        transcript = transcriber.transcribe(audio_data)
+        user_message = ""
+        transcription_error = None
 
-        if transcript.status == aai.TranscriptStatus.error:
-            raise HTTPException(status_code=500, detail=f"Transcription failed: {transcript.error}")
+        try:
+            audio_data = file.file.read()
+            if not ASSEMBLYAI_API_KEY:
+                raise Exception(status_code=500, detail="AssemblyAI API key is not set")
+            
+            transcriber = aai.Transcriber()
+            transcript = transcriber.transcribe(audio_data)
 
-        user_message = transcript.text
-        if not user_message or user_message.strip() == "":
-            raise HTTPException(status_code=400, detail="No valid user message detected")
-        
+            if transcript.status == aai.TranscriptStatus.error:
+                raise Exception(f"Transcription failed: {transcript.error}")
+
+            user_message = transcript.text
+            if not user_message or user_message.strip() == "":
+                raise Exception("No speech detected in the audio")
+
+        except Exception as e:
+            transcription_error = str(e)
+            print(f"Transcription error: {transcription_error}")
+
+            user_message = "I'm having trouble understanding the audio."
+
         if session_id not in chat_sessions:
             chat_sessions[session_id] = []
 
         chat_sessions[session_id].append({"role": "user", "content": user_message})
-        
-        messages = []
-        for message in chat_sessions[session_id]:
-            messages.append(f"{message['role'].title()}: {message['content']}")
-        
-        conversation_text = "\n".join(messages)
-        system_prompt = (
-            "You are a helpful assistant. You need to respond formally and straightforwardly. "
-            "No need to reply for stupid questions. Just informative questions can be asked by the user. "
-            "Here is the conversation history:\n"
-        )
-        
-        full_prompt = system_prompt + conversation_text
-        
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(full_prompt)
 
-        assistant_message = response.text
+        assistant_message = ""
+        llm_error = None
+
+        try:
+            if not os.getenv("GOOGLE_API_KEY"):
+                raise Exception("Google Generative AI API key is not set")
+            
+            messages = []
+            for message in chat_sessions[session_id]:
+                messages.append(f"{message['role'].title()}: {message['content']}")
+            
+            conversation_text = "\n".join(messages)
+            system_prompt = (
+                "You are a helpful assistant. You need to respond formally and straightforwardly. "
+                "No need to reply for stupid questions. Just informative questions can be asked by the user. "
+                "Here is the conversation history:\n"
+            )
+            
+            full_prompt = system_prompt + conversation_text
+            
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content(full_prompt)
+
+            assistant_message = response.text
+
+            if not assistant_message or assistant_message.strip() == "":
+                raise Exception("Empty response generated")
+
+        except Exception as e:
+            llm_error = str(e)
+            print(f"LLM error: {llm_error}")
+
+            if transcription_error:
+                assistant_message = "I'm having trouble with both understanding the audio and generating a response. Try again later."
+            else:
+                assistant_message = "I'm having trouble generating a response. Try again later."
 
         chat_sessions[session_id].append({"role": "assistant", "content": assistant_message})
 
-        speech_payload = {
-            "text": assistant_message,
-            "voice_id": "en-IN-arohi",
-            "language": "en-IN"
-        }
+        audio_url = None
+        tts_error = None
 
-        headers = {
-            "api-key": MURF_API_KEY,
-            "Content-Type": "application/json"
-        }
+        try:
+            if not MURF_API_KEY or not MURF_API_URL:
+                raise Exception("MURF API key or URL is not set")
 
-        tts_response = requests.post(MURF_API_URL, headers=headers, json=speech_payload)
+            speech_payload = {
+                "text": assistant_message,
+                "voice_id": "en-IN-arohi",
+                "language": "en-IN"
+            }
 
-        if tts_response.status_code != 200:
-            raise HTTPException(
-                status_code=tts_response.status_code, 
-                detail=f"TTS generation failed: {tts_response.text}"
-            )
+            headers = {
+                "api-key": MURF_API_KEY,
+                "Content-Type": "application/json"
+            }
 
-        tts_result = tts_response.json()
-        audio_url = tts_result.get("audioFile")
-        
-        if not audio_url:
-            raise HTTPException(status_code=500, detail="No audio URL received from TTS service")
-        
-        return {
+            tts_response = requests.post(MURF_API_URL, headers=headers, json=speech_payload)
+
+            if tts_response.status_code != 200:
+                raise Exception(f"TTS API returned status {tts_response.status_code}: {tts_response.text}")
+
+            tts_result = tts_response.json()
+            audio_url = tts_result.get("audioFile")
+            
+            if not audio_url:
+                raise Exception(f"No audio URL received from TTS service")
+
+        except Exception as e:
+            tts_error = str(e)
+            print(f"TTS error: {tts_error}")
+            audio_url = None
+
+        response_data = {
             "session_id": session_id,
             "audio_url": audio_url,
             "user_message": user_message,
             "assistant_response": assistant_message,
             "chat_history_length": len(chat_sessions[session_id]),
-            "input_type": "audio"
+            "input_type": "audio",
+            "errors": {
+                "llm_error": llm_error,
+                "tts_error": tts_error,
+                "transcription_error": transcription_error
+            }
         }
+
+        return response_data
         
     except HTTPException:
         raise
     except Exception as e:
         print(f"Agent chat error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Agent chat failed: {str(e)}")
+        return {
+            "session_id": session_id,
+            "audio_url": None,
+            "user_message": "Error processing audio",
+            "assistant_response": "I'm experiencing technical difficulties right now. Please try again later.",
+            "chat_history_length": 0,
+            "input_type": "audio",
+            "errors": {
+                "critical_error": str(e)
+            }
+        }
 
 @app.get("/agent/chat/{session_id}/history")
 def get_chat_history(session_id: str):

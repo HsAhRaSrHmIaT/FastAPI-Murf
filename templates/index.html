@@ -12,168 +12,21 @@
     >
         <header class="text-center py-4">
             <h1
-                class="text-3xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2"
+                class="text-3xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2 select-none tracking-wide"
             >
                 🎙️ Voice Agent
             </h1>
-            <div id="sessionInfo" class="text-sm text-gray-300 mt-2">
+            <div id="sessionInfo" class="text-sm text-gray-300 mt-2 italic font-bold tracking-wide bg-white/10 backdrop-blur-lg p-2 rounded-xl shadow-lg max-w-md mx-auto border border-white/20">
                 <span id="sessionId">Loading session...</span>
             </div>
         </header>
 
         <div class="container mx-auto">
             <div
-                class="flex justify-center items-start gap-6 max-w-5xl mx-auto"
+                class="flex justify-center items-start gap-6 max-w-5xl mx-auto select-none"
             >
-                <!-- Text to Speech Section -->
-                <!-- <div
-                    class="bg-white/10 backdrop-blur-lg p-8 rounded-3xl shadow-2xl border border-white/20 hover:border-purple-400/50 transition-all duration-300 flex-1 max-w-md"
-                >
-                    <div class="text-center mb-6">
-                        <div
-                            class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mb-4"
-                        >
-                            <svg
-                                class="w-8 h-8 text-white"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <polygon
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    points="11,5 6,9 2,9 2,15 6,15 11,19 11,5"
-                                />
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M15.54 8.46a5 5 0 0 1 0 7.07"
-                                />
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M19.07 4.93a10 10 0 0 1 0 14.14"
-                                />
-                            </svg>
-                        </div>
-                        <h2 class="text-2xl font-bold text-white mb-2">
-                            Text to Speech
-                        </h2>
-                        <p class="text-gray-300">
-                            Transform your text into natural speech
-                        </p>
-                    </div>
-                    <form id="ttsForm" class="space-y-6">
-                        <div class="relative">
-                            <textarea
-                                id="userInput"
-                                class="w-full h-32 p-4 border border-white/20 rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent resize-none transition-all duration-300"
-                                rows="4"
-                                placeholder="Type your message here..."
-                                style="
-                                    scrollbar-width: thin;
-                                    scrollbar-color: #410266 transparent;
-                                "
-                                required
-                            ></textarea>
-                            <div
-                                class="absolute bottom-3 right-3 text-xs text-gray-400"
-                                id="charCount"
-                            >
-                                0 characters
-                            </div>
-                        </div>
-
-                        <button
-                            id="submitBtn"
-                            class="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out flex items-center justify-center gap-3 relative overflow-hidden group"
-                            type="submit"
-                        >
-                            <div
-                                class="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                            ></div>
-                            <svg
-                                class="w-6 h-6 text-white"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <polygon
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    points="11,5 6,9 2,9 2,15 6,15 11,19 11,5"
-                                />
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M15.54 8.46a5 5 0 0 1 0 7.07"
-                                />
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M19.07 4.93a10 10 0 0 1 0 14.14"
-                                />
-                            </svg>
-                            <span id="btnText" class="relative z-10"
-                                >Generate Speech</span
-                            >
-                            <div id="btnLoader" class="hidden relative z-10">
-                                <div
-                                    class="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"
-                                ></div>
-                            </div>
-                        </button>
-                    </form>
-
-                    <div id="audio-container" class="mt-8">
-                        <div
-                            class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10"
-                        >
-                            <h3
-                                class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2"
-                            >
-                                <svg
-                                    class="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                                    ></path>
-                                </svg>
-                                Generated Audio
-                            </h3>
-                            <audio
-                                id="audioPlayer"
-                                controls
-                                class="w-full"
-                                style="filter: hue-rotate(270deg) saturate(2)"
-                            >
-                                <source
-                                    id="audioSource"
-                                    src=""
-                                    type="audio/mpeg"
-                                />
-                                Your browser does not support the audio element.
-                            </audio>
-                        </div>
-                    </div>
-                </div> -->
-                <!-- Voice Recording & Transcription Section -->
                 <div
-                    class="bg-white/10 backdrop-blur-lg p-8 rounded-3xl shadow-2xl border border-white/20 hover:border-red-400/50 transition-all duration-300 flex-1 max-w-md"
+                    class="bg-white/10 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-white/20 hover:border-red-400/50 transition-all duration-300 flex-1 max-w-md"
                 >
                     <div class="text-center mb-6">
                         <div
@@ -279,44 +132,6 @@
                             id="uploadStatus"
                             class="hidden rounded-xl p-4 text-sm font-medium border backdrop-blur-sm bg-white/5 border-white/10"
                         ></div>
-                        <!-- <div
-                            class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 mt-6"
-                        >
-                            <h3
-                                class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2"
-                            >
-                                <svg
-                                    class="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z"
-                                    ></path>
-                                </svg>
-                                Transcription Result
-                            </h3>
-                            <div
-                                id="transcriptionContainer"
-                                class="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-400/20 rounded-lg p-4 min-h-[70px] max-h-[90px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-400/50 scrollbar-track-purple-200/20"
-                                style="
-                                    scrollbar-width: thin;
-                                    scrollbar-color: #410266 transparent;
-                                "
-                            >
-                                <div
-                                    id="transcriptionContent"
-                                    class="text-gray-400 text-sm text-center italic"
-                                >
-                                    Record audio to see transcription results
-                                    here...
-                                </div>
-                            </div>
-                        </div> -->
                         <div id="ai-audio-container" class="mt-8">
                             <div
                                 class="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10"
