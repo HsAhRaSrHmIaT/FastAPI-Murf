@@ -78,11 +78,11 @@ _Reset_
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/HsAhRaSrHmIaT/FastAPI.git
 cd FastAPI
 
 # Install dependencies
-pip install fastapi uvicorn python-multipart aiofiles requests python-dotenv
+pip install fastapi uvicorn python-multipart requests python-dotenv
 ```
 
 ### Environment Setup
