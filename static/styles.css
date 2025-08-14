@@ -32,3 +32,15 @@
         opacity: 0.5;
     }
 }
+
+.speaker-btn:hover {
+    filter: brightness(1.5);
+}
+.speaking {
+    animation: pulse 0.8s infinite alternate;
+}
+@keyframes pulse {
+    to {
+        filter: brightness(2);
+    }
+}
