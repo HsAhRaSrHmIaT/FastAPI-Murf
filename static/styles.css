@@ -44,3 +44,63 @@
         filter: brightness(2);
     }
 }
+
+@keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .message-item:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+  }
+
+  .system-message {
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  #messagesContainer {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar for WebKit browsers */
+  #messagesContainer::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #messagesContainer::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+  }
+
+  #messagesContainer::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+  }
+
+  #messagesContainer::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  /* For Firefox */
+  #messagesContainer {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Ensure proper height calculation on mobile */
+  @media (max-height: 600px) {
+    #messagesContainer {
+      max-height: calc(100vh - 320px) !important;
+    }
+  }

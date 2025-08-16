@@ -6,12 +6,9 @@ let userAudioBlobs = [];
 let isRecording = false;
 let conversationCount = 0;
 
-// -- DOM ------------------------------------------------------------
 const $ = (sel) => document.getElementById(sel);
 
-// Enhanced status display function - now just uses conversation panel
 function showStatus(type, message, duration = 3000) {
-    // Use the conversation panel for status messages instead of separate status area
     addSystemMessage(message, type);
 }
 
@@ -48,7 +45,6 @@ function updateHealthStatus(healthData) {
     }
 }
 
-// == SESSION INIT ==
 function getSessionId() {
     const urlParams = new URLSearchParams(window.location.search);
     let s = urlParams.get("session");
@@ -69,7 +65,6 @@ function getSessionId() {
 }
 sessionId = getSessionId();
 
-// Initialize session display
 function initializeSessionDisplay() {
     const sessionElement = $("sessionId");
     const sessionInfoElement = $("sessionInfo");
@@ -83,7 +78,6 @@ function initializeSessionDisplay() {
     }
 }
 
-// == RECORD CONTROLS ==
 function enableRecordingUI(recording) {
     if (!record || !stop || !reset) return;
 
@@ -103,12 +97,11 @@ function enableRecordingUI(recording) {
     }
 }
 
-// Conversation Panel Management
+// Conversation Panel
 function addMessageToConversation(content, isUser = true, timestamp = null) {
     const messagesContainer = $("messagesContainer");
     if (!messagesContainer) return;
 
-    // Clear welcome message on first interaction
     if (conversationCount === 0) {
         messagesContainer.innerHTML = "";
     }
@@ -237,7 +230,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Typing indicator functions
+// Typing indicator
 function showTypingIndicator() {
     const typingIndicator = $("typingIndicator");
     if (typingIndicator) {
@@ -256,7 +249,7 @@ function hideTypingIndicator() {
     }
 }
 
-// Health check function
+// Health check
 async function checkServerHealth() {
     try {
         const response = await fetch("/health");
@@ -278,14 +271,14 @@ async function checkServerHealth() {
         }
     } catch (error) {
         updateHealthStatus({ status: "down" });
-        console.error("Health check failed:", error);
+        // console.error("Health check failed:", error);
     }
 }
 
-// == RECORDING LOGIC ==
+// Recording Logic
 async function initializeRecording() {
     try {
-        console.log("Requesting microphone access...");
+        // console.log("Requesting microphone access...");
         addSystemMessage("Requesting microphone access...", "info");
 
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -296,7 +289,7 @@ async function initializeRecording() {
             },
         });
 
-        console.log("Microphone access granted");
+        // console.log("Microphone access granted");
         addSystemMessage(
             "Microphone access granted! Ready to record.",
             "success"
@@ -310,10 +303,8 @@ async function initializeRecording() {
         stop = $("stop");
         reset = $("reset");
 
-        // UI
         enableRecordingUI(false);
 
-        // Handlers
         record.onclick = () => {
             if (isRecording) return;
 
@@ -351,22 +342,21 @@ async function initializeRecording() {
             }
 
             let blob = new Blob(chunks, { type: "audio/webm" });
-            console.log("Audio blob created:", blob.size, "bytes");
+            // console.log("Audio blob created:", blob.size, "bytes");
 
-            // Save to buffer in case user clicks play on user's message
             userAudioBlobs.push(blob);
             await sendAudio(blob);
         };
 
         mediaRecorder.onerror = (event) => {
-            console.error("MediaRecorder error:", event.error);
+            // console.error("MediaRecorder error:", event.error);
             showStatus("error", `Recording error: ${event.error.name}`);
             addSystemMessage(`Recording error: ${event.error.name}`, "error");
             isRecording = false;
             enableRecordingUI(false);
         };
     } catch (err) {
-        console.error("Error accessing microphone:", err);
+        // console.error("Error accessing microphone:", err);
         let errorMessage = "Microphone access denied";
         let suggestion = "Please reload and allow microphone permission.";
 
@@ -386,7 +376,6 @@ async function initializeRecording() {
         showStatus("error", `${errorMessage}. ${suggestion}`);
         addSystemMessage(`${errorMessage}. ${suggestion}`, "error");
 
-        // Disable recording buttons
         record = $("record");
         stop = $("stop");
         reset = $("reset");
@@ -414,11 +403,9 @@ async function initializeRecording() {
 }
 
 async function sendAudio(blob) {
-    // Add typing indicator
     showStatus("info", "🤖 AI is thinking...");
     showTypingIndicator();
 
-    // 1. Get transcription/AI response and TTS from server
     const formData = new FormData();
     formData.append("file", blob, "useraudio.webm");
 
@@ -439,10 +426,8 @@ async function sendAudio(blob) {
         const result = await resp.json();
         console.log("Server response:", result);
 
-        // Hide typing indicator
         hideTypingIndicator();
 
-        // Get user text from result (transcription), AI text, TTS url if available
         const userText =
             result.user_message || result.user_prompt_text || "[Audio message]";
         const aiText =
@@ -451,11 +436,10 @@ async function sendAudio(blob) {
             "No response received";
         const audioUrl = result.audio_url;
 
-        // Add messages to conversation
         addMessageToConversation(userText, true);
         addMessageToConversation(aiText, false);
 
-        // Handle errors if any
+        // Handle errors
         if (result.errors) {
             const errors = result.errors;
             let errorMessages = [];
@@ -484,7 +468,6 @@ async function sendAudio(blob) {
             }
         }
 
-        // 2. Play AI response if available
         if (audioUrl) {
             try {
                 showStatus("success", "🔊 Playing AI response...");
@@ -533,7 +516,7 @@ async function sendAudio(blob) {
             }
         }
     } catch (err) {
-        console.error("Network error:", err);
+        // console.error("Network error:", err);
         hideTypingIndicator();
 
         let errorMsg = "Network error";
@@ -549,9 +532,7 @@ async function sendAudio(blob) {
     }
 }
 
-// == RESET HANDLER ==
 function doReset() {
-    // Reset UI and clear chat on backend
     userAudioBlobs = [];
     isRecording = false;
     enableRecordingUI(false);
@@ -567,21 +548,16 @@ function doReset() {
             addSystemMessage("Could not reset session on server", "error");
         });
 
-    // Clear conversation
     clearConversation();
 }
 
-// == DOM READY ==
 document.addEventListener("DOMContentLoaded", async () => {
-    console.log("DOM loaded, initializing...");
+    // console.log("DOM loaded, initializing...");
 
-    // Initialize session display
     initializeSessionDisplay();
 
-    // Check server health
     await checkServerHealth();
 
-    // Check browser compatibility
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         showStatus(
             "error",
@@ -603,75 +579,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    // Initialize recording
     await initializeRecording();
 
-    // Set up periodic health checks
-    setInterval(checkServerHealth, 30000); // Check every 30 seconds
+    setInterval(checkServerHealth, 30000);
 });
-
-// Add CSS animations
-const style = document.createElement("style");
-style.textContent = `
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .animate-fadeIn {
-    animation: fadeIn 0.3s ease-out;
-  }
-
-  .message-item:hover {
-    transform: translateY(-2px);
-    transition: transform 0.2s ease;
-  }
-
-  .system-message {
-    animation: fadeIn 0.4s ease-out;
-  }
-
-  #messagesContainer {
-    scroll-behavior: smooth;
-  }
-
-  /* Custom scrollbar for WebKit browsers */
-  #messagesContainer::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  #messagesContainer::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
-  }
-
-  #messagesContainer::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 3px;
-  }
-
-  #messagesContainer::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
-  }
-
-  /* For Firefox */
-  #messagesContainer {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
-  }
-  
-  /* Ensure proper height calculation on mobile */
-  @media (max-height: 600px) {
-    #messagesContainer {
-      max-height: calc(100vh - 320px) !important;
-    }
-  }
-`;
-
-document.head.appendChild(style);

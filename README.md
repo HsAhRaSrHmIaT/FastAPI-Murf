@@ -1,13 +1,11 @@
-# 🎙️ Voice Agent - AI-Powered Voice Assistant
+# 🎙️ Voice Agent - AI-Powered Speech-to-Speech Platform
 
-A real-time voice interaction platform built with FastAPI that enables natural conversations with AI through speech-to-text and text-to-speech technologies.
+A professional, real-time speech-to-speech interaction platform built with FastAPI that enables natural voice conversations with AI through a complete pipeline: Speech-to-Text → LLM Processing → Text-to-Speech.
 
-
-## Screenshots
+## 📸 Screenshots
 
 _Main Interface_
 ![Main Interface](screenshots/main.png)
-
 
 _AI Conversation_
 ![AI Conversation](screenshots/thinking.png)
@@ -18,35 +16,25 @@ _Reset_
 
 ## 🌟 Core Features
 
--   **🎤 Real-time Voice Recording** - Browser-based audio capture with visual feedback
--   **🤖 AI Conversations** - Intelligent responses using Google Gemini AI
--   **🔊 Natural Voice Synthesis** - High-quality text-to-speech with Murf AI
--   **📝 Accurate Transcription** - Speech-to-text conversion via AssemblyAI
--   **💬 Live Chat Interface** - Real-time conversation display with message history
+### Speech-to-Speech Pipeline
+
+-   **🎤 Voice Input** - Real-time browser audio capture with WebAudio API
+-   **📝 Speech-to-Text** - High-accuracy transcription via AssemblyAI
+-   **🤖 AI Processing** - Intelligent responses using Google Gemini AI
+-   **🔊 Text-to-Speech** - Natural voice synthesis with Murf AI
+-   **🎧 Audio Output** - Seamless playback in browser
+
+### Advanced Capabilities
+
+-   **💬 Conversational Memory** - Maintains context across conversation turns
+-   **📱 Responsive UI** - Works perfectly on desktop and mobile devices
 -   **🔄 Session Management** - Persistent conversations with unique session IDs
--   **📱 Responsive Design** - Works seamlessly on desktop and mobile devices
+-   **⚡ Real-time Processing** - Optimized pipeline for low-latency responses
+-   **🛡️ Robust Error Handling** - Graceful fallbacks when services are unavailable
 
-## 🛠️ Technologies
+## 🏗️ Architecture
 
-### Backend
-
--   **FastAPI** - Modern Python web framework for building APIs
--   **Uvicorn** - ASGI server for production-ready deployment
--   **Python 3.12+** - Core programming language
--   **Pydantic** - Data validation using Python type hints
-
-### AI & Audio Services
-
--   **Google Gemini AI** - Advanced language model for intelligent responses
--   **Murf AI** - Professional text-to-speech synthesis
--   **AssemblyAI** - High-accuracy speech-to-text transcription
-
-### Frontend
-
--   **Tailwind CSS** - Modern utility-first CSS framework
--   **Vanilla JavaScript** - WebAudio API integration for recording
-
-## Architecture
+### Modular Design
 
 ```
 ┌─────────────┐    ┌──────────────┐    ┌─────────────────┐
@@ -55,34 +43,84 @@ _Reset_
 └─────────────┘    └──────────────┘    └─────────────────┘
        │                   │                      │
        ▼                   ▼                      ▼
-   Audio Input  ────→  Processing  ────→   Audio Output
+   Audio Input  ────>  Processing  ────>   Audio Output
 ```
 
-**Workflow:**
+### Speech-to-Speech Workflow
 
-1. **Record** → User records voice through browser
-2. **Upload** → Audio sent to FastAPI backend
-3. **Transcribe** → AssemblyAI converts speech to text
-4. **Process** → Gemini AI generates intelligent response
-5. **Synthesize** → Murf AI converts response to speech
-6. **Playback** → Audio response played in browser
+1. **🎤 Capture** → User records voice through browser
+2. **📤 Upload** → Audio sent to FastAPI backend via `/agent/chat/{session_id}`
+3. **📝 Transcribe** → AssemblyAI converts speech to text
+4. **🧠 Process** → Gemini AI generates intelligent response with conversation context
+5. **🔊 Synthesize** → Murf AI converts response to natural speech
+6. **🎧 Playback** → Audio response streamed back to browser
 
-## Quick Start
+## 🛠️ Technology Stack
+
+### Backend Architecture
+
+-   **FastAPI 2.0** - Modern async web framework with automatic API documentation
+-   **Uvicorn** - High-performance ASGI server
+-   **Python 3.12+** - Latest Python with enhanced performance
+-   **Pydantic** - Data validation and serialization
+
+### AI & Audio Services
+
+-   **AssemblyAI** - Enterprise-grade speech-to-text transcription
+-   **Google Gemini 1.5 Flash** - Advanced language model for conversations
+-   **Murf AI** - Professional text-to-speech synthesis
+-   **Session Management** - In-memory conversation state management
+
+### Frontend Technology
+
+-   **Tailwind CSS** - Modern utility-first styling framework
+-   **Vanilla JavaScript** - WebAudio API integration for recording/playback
+-   **Responsive Design** - Mobile-first approach with smooth animations
+
+## 📁 Project Structure
+
+```
+FastAPI/
+├── 📄 main.py                            # FastAPI application entry point
+├── 📁 app/                               # Main application package
+│   ├── 📁 api/                           # API endpoint modules
+│   │   ├── 📄 agent.py                   # Speech-to-speech chat endpoints
+│   │   ├── 📄 health.py                  # System health monitoring
+│   │   └── 📄 legacy.py                  # Backward compatibility
+│   ├── 📁 core/                          # Core functionality
+│   │   └── 📄 config.py                  # Environment configuration
+│   ├── 📁 models/                        # Data models
+│   │   └── 📄 schemas.py                 # Pydantic request/response models
+│   └── 📁 services/                      # Business logic services
+│       ├── 📄 stt_service.py             # Speech-to-Text service
+│       ├── 📄 llm_service.py             # Language model service
+│       ├── 📄 tts_service.py             # Text-to-Speech service
+│       ├── 📄 session_service.py         # Conversation management
+│       └── 📄 health_service.py          # System monitoring
+├── 📁 templates/                         # HTML templates
+│   └── 📄 index.html                     # Main web interface
+├── 📁 static/                            # Frontend assets
+│   ├── 📄 script.js                      # Application JavaScript
+│   └── 📄 styles.css                     # Additional styling
+└── 📄 requirements.txt                   # Python dependencies
+```
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
 -   Python 3.12 or higher
--   Valid API keys for Gemini, Murf, and AssemblyAI
+-   Valid API keys for all services
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/HsAhRaSrHmIaT/FastAPI.git
 cd FastAPI
 
 # Install dependencies
-pip install fastapi uvicorn python-multipart aiofiles requests python-dotenv
+pip install -r requirements.txt
 ```
 
 ### Environment Setup
@@ -90,7 +128,8 @@ pip install fastapi uvicorn python-multipart aiofiles requests python-dotenv
 Create a `.env` file in the root directory:
 
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
+# Required API Keys
+GOOGLE_API_KEY=your_gemini_api_key_here
 MURF_API_KEY=your_murf_api_key_here
 MURF_API_URL=your_murf_api_url_here
 ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
@@ -99,60 +138,106 @@ ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
 ### Run the Application
 
 ```bash
-# Development server
-uvicorn run:app --reload --host 0.0.0.0 --port 8000
+# Start the development server
+python main.py
 
-# Or use the run script
-python start_server.py
+# Or use uvicorn directly
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Visit `http://localhost:8000` to start using the Voice Agent!
+Visit `http://localhost:8000` to start your voice conversations! 🎙️
 
-## Project Structure
+## 🔧 API Endpoints
 
-```
-FastAPI/
-├── run.py                 # FastAPI application entry point
-├── start_server.py        # Development server launcher
-├── .env                   # Environment variables (create this)
-├── templates/
-│   └── index.html         # Main web interface
-├── static/
-│   ├── script.js          # Frontend JavaScript logic
-│   └── styles.css         # Additional CSS styles
-├── screenshots/           # Application screenshots
-└── requirements.txt       # Python package dependencies
-```
+### Core Speech-to-Speech
 
+| Endpoint                           | Method | Description                        |
+| ---------------------------------- | ------ | ---------------------------------- |
+| `/`                                | GET    | Main web interface                 |
+| `/agent/chat/{session_id}`         | POST   | Complete speech-to-speech pipeline |
+| `/agent/chat/{session_id}/history` | GET    | Get conversation history           |
+| `/agent/chat/{session_id}`         | DELETE | Clear conversation history         |
 
-## Key Components
+### System Monitoring
 
-### Voice Recording
+| Endpoint              | Method | Description                   |
+| --------------------- | ------ | ----------------------------- |
+| `/health/`            | GET    | System health status          |
+| `/health/test-errors` | GET    | Test error scenarios          |
+| `/docs`               | GET    | Interactive API documentation |
 
--   WebAudio API integration for high-quality recording
--   Real-time visual feedback during recording
--   Automatic audio format handling
+### Legacy Support
 
-### AI Processing
+| Endpoint           | Method | Description         |
+| ------------------ | ------ | ------------------- |
+| `/generate-speech` | POST   | Text-to-speech only |
+| `/upload`          | POST   | Speech-to-text only |
+| `/llm/query`       | POST   | LLM processing only |
 
--   Asynchronous processing pipeline
--   Context-aware conversation management
--   Error handling and retry mechanisms
+## 🎯 Key Features Deep Dive
 
-### User Interface
+### Conversation Intelligence
 
--   Modern gradient design with smooth animations
--   Responsive layout for all device sizes
--   Real-time status indicators and typing animations
+-   **Context Awareness** - Maintains conversation history for natural flow
+-   **Error Recovery** - Continues conversation even if individual services fail
+-   **Session Isolation** - Multiple users can have independent conversations
 
-## Contributing
+### Audio Processing
+
+-   **High-Quality Recording** - WebAudio API with noise suppression
+-   **Multiple Formats** - Supports WAV, MP3, WebM, OGG, MP4
+-   **Optimized Pipeline** - Efficient audio processing and streaming
+
+### User Experience
+
+-   **Real-time Feedback** - Visual indicators for recording, processing, and playback
+-   **Responsive Design** - Seamless experience across all devices
+-   **Accessibility** - Keyboard navigation and screen reader support
+
+## 🔧 Service Architecture
+
+### STT Service (`stt_service.py`)
+
+-   Handles audio file processing and transcription
+-   Integrates with AssemblyAI for accurate speech recognition
+-   Supports multiple audio formats with automatic conversion
+
+### LLM Service (`llm_service.py`)
+
+-   Manages conversation context and AI responses
+-   Integrates with Google Gemini 1.5 Flash model
+-   Implements conversation memory for natural interactions
+
+### TTS Service (`tts_service.py`)
+
+-   Converts text responses to natural speech
+-   Integrates with Murf AI for high-quality voice synthesis
+-   Handles audio streaming and format optimization
+
+### Session Service (`session_service.py`)
+
+-   Manages conversation state across requests
+-   Implements in-memory session storage
+-   Provides conversation history and cleanup
+
+### Health Service (`health_service.py`)
+
+-   Monitors all external service availability
+-   Provides detailed health status reporting
+-   Enables graceful degradation on service failures
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes and test thoroughly
+3. Make your changes with proper testing
 4. Commit: `git commit -m 'Add amazing feature'`
 5. Push: `git push origin feature/amazing-feature`
 6. Open a Pull Request
 
 
-**Built with ❤️ using FastAPI, Murf AI, and Assembly AI**
+---
+
+**Built with modern AI services and web technologies for seamless voice interactions**
+
+_Refactored Architecture - Production Ready_ 🚀
