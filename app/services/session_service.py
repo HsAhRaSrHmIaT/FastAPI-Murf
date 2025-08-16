@@ -1,10 +1,10 @@
 """Session management service for chat conversations"""
 from typing import Dict, List, Optional
-# from app.core.logging import get_logger
+from app.core.logging import get_logger
 from app.models.schemas import ChatMessage, ChatHistory
 import time
 
-# logger = get_logger(__name__)
+logger = get_logger(__name__)
 
 
 class SessionService:
@@ -12,13 +12,13 @@ class SessionService:
     
     def __init__(self):
         self._sessions: Dict[str, List[Dict[str, str]]] = {}
-        # logger.info("Session service initialized")
+        logger.info("Session service initialized")
     
     def create_session(self, session_id: str) -> None:
         """Create a new chat session"""
         if session_id not in self._sessions:
             self._sessions[session_id] = []
-            # logger.info(f"Created new session: {session_id}")
+            logger.info(f"Created new session: {session_id}")
     
     def add_message(self, session_id: str, role: str, content: str) -> None:
         """
@@ -39,7 +39,7 @@ class SessionService:
         }
         
         self._sessions[session_id].append(message)
-        # logger.info(f"Added {role} message to session {session_id}")
+        logger.info(f"Added {role} message to session {session_id}")
     
     def get_chat_history(self, session_id: str) -> ChatHistory:
         """
@@ -52,7 +52,7 @@ class SessionService:
             ChatHistory object with messages
         """
         if session_id not in self._sessions:
-            # logger.info(f"Session {session_id} not found, returning empty history")
+            logger.info(f"Session {session_id} not found, returning empty history")
             return ChatHistory(session_id=session_id, messages=[])
         
         messages = [
@@ -91,10 +91,10 @@ class SessionService:
         """
         if session_id in self._sessions:
             del self._sessions[session_id]
-            # logger.info(f"Cleared session: {session_id}")
+            logger.info(f"Cleared session: {session_id}")
             return True
         else:
-            # logger.warning(f"Attempted to clear non-existent session: {session_id}")
+            logger.warning(f"Attempted to clear non-existent session: {session_id}")
             return False
     
     def get_session_count(self) -> int:

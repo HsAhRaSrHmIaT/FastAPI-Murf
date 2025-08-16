@@ -88,6 +88,7 @@ FastAPI/
 │   │   ├── 📄 health.py                  # System health monitoring
 │   │   └── 📄 legacy.py                  # Backward compatibility
 │   ├── 📁 core/                          # Core functionality
+│   │   ├── 📄 logging.py                 # Logging configuration
 │   │   └── 📄 config.py                  # Environment configuration
 │   ├── 📁 models/                        # Data models
 │   │   └── 📄 schemas.py                 # Pydantic request/response models

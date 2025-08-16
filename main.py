@@ -7,12 +7,12 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-# from app.core.logging import setup_logging, get_logger
+from app.core.logging import setup_logging, get_logger
 from app.api import health, agent, legacy
 
 # Setup logging
-# setup_logging()
-# logger = get_logger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
@@ -46,35 +46,35 @@ app.include_router(health.router)
 app.include_router(agent.router)
 app.include_router(legacy.router)
 
-# logger.info("Voice Agent API initialized successfully")
+logger.info("Voice Agent API initialized successfully")
 
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     """Serve the main web interface"""
-    # logger.info("Main interface requested")
+    logger.info("Main interface requested")
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-# @app.on_event("startup")
-# async def startup_event():
-#     """Application startup event"""
-#     logger.info(f"Voice Agent API starting up on {settings.host}:{settings.port}")
-#     logger.info(f"Upload directory: {settings.upload_dir}")
-#     logger.info(f"Debug mode: {settings.debug}")
-#
-#     # Log service availability
-#     from app.services.health_service import health_service
-#     health_status = health_service.get_health_status()
-#     logger.info(f"Application health: {health_status.status}")
-#     if health_status.missing_api_keys:
-#         logger.warning(f"Missing API keys: {health_status.missing_api_keys}")
+@app.on_event("startup")
+async def startup_event():
+    """Application startup event"""
+    logger.info(f"Voice Agent API starting up on {settings.host}:{settings.port}")
+    logger.info(f"Upload directory: {settings.upload_dir}")
+    logger.info(f"Debug mode: {settings.debug}")
+    
+    # Log service availability
+    from app.services.health_service import health_service
+    health_status = health_service.get_health_status()
+    logger.info(f"Application health: {health_status.status}")
+    if health_status.missing_api_keys:
+        logger.warning(f"Missing API keys: {health_status.missing_api_keys}")
 
 
-# @app.on_event("shutdown")
-# async def shutdown_event():
-#     """Application shutdown event"""
-#     logger.info("Voice Agent API shutting down")
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Application shutdown event"""
+    logger.info("Voice Agent API shutting down")
 
 
 if __name__ == "__main__":

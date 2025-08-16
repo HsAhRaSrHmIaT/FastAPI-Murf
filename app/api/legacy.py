@@ -6,9 +6,9 @@ from app.services.stt_service import stt_service
 from app.services.llm_service import llm_service
 from app.services.tts_service import tts_service
 from app.core.config import settings
-# from app.core.logging import get_logger
+from app.core.logging import get_logger
 
-# logger = get_logger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(tags=["legacy"])
 
 
@@ -23,12 +23,12 @@ async def generate_speech(speech_request: SpeechRequest):
     Returns:
         SpeechResponse with audio URL
     """
-    # logger.info(f"Legacy speech generation requested for: '{speech_request.text[:50]}...'")
+    logger.info(f"Legacy speech generation requested for: '{speech_request.text[:50]}...'")
     
     try:
         return await tts_service.generate_speech(speech_request)
     except Exception as e:
-        # logger.error(f"Legacy speech generation failed: {str(e)}")
+        logger.error(f"Legacy speech generation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -43,7 +43,7 @@ async def upload_file(file: UploadFile = File(...)):
     Returns:
         Transcription result with metadata
     """
-    # logger.info(f"Legacy file upload: {file.filename}")
+    logger.info(f"Legacy file upload: {file.filename}")
     
     try:
         # Validate file type
@@ -70,7 +70,7 @@ async def upload_file(file: UploadFile = File(...)):
     except HTTPException:
         raise
     except Exception as e:
-        # logger.error(f"Legacy upload failed: {str(e)}")
+        logger.error(f"Legacy upload failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -89,7 +89,7 @@ async def llm_query(
     Returns:
         LLMResponse with generated text
     """
-    # logger.info("Legacy LLM query requested")
+    logger.info("Legacy LLM query requested")
     
     try:
         final_prompt = ""
@@ -135,5 +135,5 @@ async def llm_query(
     except HTTPException:
         raise
     except Exception as e:
-        # logger.error(f"Legacy LLM query failed: {str(e)}")
+        logger.error(f"Legacy LLM query failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

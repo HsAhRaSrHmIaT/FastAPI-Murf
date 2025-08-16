@@ -9,4 +9,3 @@ __pycache__/
 uploads
 run_legacy.py
 app.log
-logging.py

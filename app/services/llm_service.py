@@ -2,10 +2,10 @@
 import google.generativeai as genai
 from typing import List, Optional
 from app.core.config import settings
-# from app.core.logging import get_logger
+from app.core.logging import get_logger
 from app.models.schemas import LLMRequest, LLMResponse, ChatMessage
 
-# logger = get_logger(__name__)
+logger = get_logger(__name__)
 
 
 class LLMService:
@@ -15,12 +15,12 @@ class LLMService:
         self.api_key = settings.google_api_key
         
         if not self.api_key:
-            # logger.warning("Google API key not found")
+            logger.warning("Google API key not found")
             self._model = None
         else:
             genai.configure(api_key=self.api_key)
             self._model = genai.GenerativeModel(settings.default_llm_model)
-            # logger.info(f"LLM service initialized with {settings.default_llm_model}")
+            logger.info(f"LLM service initialized with {settings.default_llm_model}")
     
     def is_available(self) -> bool:
         """Check if LLM service is available"""
@@ -44,7 +44,7 @@ class LLMService:
             raise Exception("Google Gemini API key not configured")
         
         try:
-            # logger.info(f"Generating LLM response for prompt: '{prompt[:100]}...'")
+            logger.info(f"Generating LLM response for prompt: '{prompt[:100]}...'")
             
             # Add system prompt for better responses
             system_prompt = (
@@ -57,16 +57,16 @@ class LLMService:
             response = self._model.generate_content(system_prompt)
             
             if not response or not response.text:
-                # logger.error("Empty response generated from LLM")
+                logger.error("Empty response generated from LLM")
                 raise Exception("Empty response generated from LLM")
             
             response_text = response.text.strip()
-            # logger.info(f"LLM response generated: '{response_text[:100]}...'")
+            logger.info(f"LLM response generated: '{response_text[:100]}...'")
             
             return response_text
             
         except Exception as e:
-            # logger.error(f"LLM service error: {str(e)}")
+            logger.error(f"LLM service error: {str(e)}")
             raise Exception(f"Language model failed: {str(e)}")
     
     async def generate_chat_response(self, chat_history: List[ChatMessage]) -> str:
@@ -101,21 +101,21 @@ class LLMService:
                 f"{conversation_text}"
             )
             
-            # logger.info(f"Generating chat response for {len(chat_history)} messages")
+            logger.info(f"Generating chat response for {len(chat_history)} messages")
             
             response = self._model.generate_content(system_prompt)
             
             if not response or not response.text:
-                # logger.error("Empty response generated from LLM")
+                logger.error("Empty response generated from LLM")
                 raise Exception("Empty response generated from LLM")
             
             response_text = response.text.strip()
-            # logger.info(f"Chat response generated: '{response_text[:100]}...'")
+            logger.info(f"Chat response generated: '{response_text[:100]}...'")
             
             return response_text
             
         except Exception as e:
-            # logger.error(f"LLM chat service error: {str(e)}")
+            logger.error(f"LLM chat service error: {str(e)}")
             raise Exception(f"Chat response generation failed: {str(e)}")
 
 

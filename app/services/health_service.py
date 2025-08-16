@@ -1,21 +1,21 @@
 """Health monitoring service"""
 from typing import List
 from app.core.config import settings
-# from app.core.logging import get_logger
+from app.core.logging import get_logger
 from app.models.schemas import HealthStatus
 from app.services.stt_service import stt_service
 from app.services.tts_service import tts_service
 from app.services.llm_service import llm_service
 import time
 
-# logger = get_logger(__name__)
+logger = get_logger(__name__)
 
 
 class HealthService:
     """Service for monitoring application health"""
     
-    # def __init__(self):
-    #     logger.info("Health service initialized")
+    def __init__(self):
+        logger.info("Health service initialized")
     
     def check_api_keys(self) -> List[str]:
         """
@@ -71,7 +71,7 @@ class HealthService:
         else:
             status = "degraded"
         
-        # logger.info(f"Health check: {status}, missing keys: {missing_keys}")
+        logger.info(f"Health check: {status}, missing keys: {missing_keys}")
         
         return HealthStatus(
             status=status,
