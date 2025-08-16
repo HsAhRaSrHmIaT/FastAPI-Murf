@@ -1,6 +1,7 @@
 """Main FastAPI application"""
+import json
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -13,6 +14,7 @@ from app.api import health, agent, legacy
 # Setup logging
 setup_logging()
 logger = get_logger(__name__)
+
 
 # Create FastAPI app
 app = FastAPI(
@@ -48,6 +50,26 @@ app.include_router(legacy.router)
 
 logger.info("Voice Agent API initialized successfully")
 
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    print("✅Connected")
+    try:
+        while True:
+            # receive the message
+            data = await websocket.receive_text()
+            print("received data", data)
+
+            response = {
+                "type": "echo",
+                "message": f"Server received: {data}",
+                "original": data
+            }
+
+            await websocket.send_text(json.dumps(response))
+
+    except WebSocketDisconnect:
+        print("❌Disconnected")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -55,6 +77,11 @@ async def read_root(request: Request):
     logger.info("Main interface requested")
     return templates.TemplateResponse("index.html", {"request": request})
 
+# @app.get("/websocket", response_class=HTMLResponse)
+# async def websocket_test(request: Request):
+#     """Serve the WebSocket test interface"""
+#     logger.info("WebSocket test interface requested")
+#     return templates.TemplateResponse("websocket.html", {"request": request})
 
 @app.on_event("startup")
 async def startup_event():
