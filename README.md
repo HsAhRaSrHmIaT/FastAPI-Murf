@@ -117,6 +117,7 @@ FastAPI/
 ```bash
 # Clone the repository
 git clone https://github.com/HsAhRaSrHmIaT/FastAPI.git
+git clone https://github.com/HsAhRaSrHmIaT/FastAPI.git
 cd FastAPI
 
 # Install dependencies
