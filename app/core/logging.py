@@ -19,7 +19,7 @@ def setup_logging() -> None:
     console_handler.setLevel(logging.INFO)
     
     # File handler (optional)
-    file_handler = logging.FileHandler("app.log")
+    file_handler = logging.FileHandler("app.log", encoding="utf-8")
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.DEBUG)
     
@@ -32,6 +32,7 @@ def setup_logging() -> None:
     # Suppress noisy loggers
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("websockets").setLevel(logging.WARNING)
 
 
 def get_logger(name: str) -> logging.Logger:
