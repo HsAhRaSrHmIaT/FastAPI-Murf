@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from random import sample
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -57,36 +58,136 @@ logger.info("Voice Agent API initialized successfully")
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    logger.info("WebSocket connected")
+    logger.info("WebSocket connected for turn detection")
     
     # Send connection confirmation to client
     await websocket.send_text(json.dumps({
         "type": "connection",
-        "message": "Connected to voice streaming server"
+        "message": "Connected to turn detection voice streaming server"
     }))
     
     transcriber = None
     
+    # Get the current event loop for thread-safe access
+    main_loop = asyncio.get_running_loop()
+    
+    # Create a queue for messages from background threads
+    message_queue = asyncio.Queue()
+    
+    # Add duplicate detection variables
+    last_transcript = ""
+    last_transcript_time = None
+    
+    async def send_queued_messages():
+        """Background task to send queued messages"""
+        while True:
+            try:
+                message = await message_queue.get()
+                if message is None:  # Shutdown signal
+                    break
+                await websocket.send_text(json.dumps(message))
+                message_queue.task_done()
+            except Exception as e:
+                logger.error(f"Error sending queued message: {e}")
+                break
+    
+    # Start the message sender task
+    sender_task = asyncio.create_task(send_queued_messages())
+    
+    def normalize_transcript(text):
+        """Normalize transcript for comparison"""
+        import re
+        # Remove punctuation and convert to lowercase
+        normalized = re.sub(r'[^\w\s]', '', text.lower().strip())
+        return normalized
+    
+    def is_better_formatted(new_text, old_text):
+        """Check if new text is better formatted than old text"""
+        import re
+        new_has_punct = bool(re.search(r'[.!?]', new_text))
+        new_has_caps = new_text != new_text.lower()
+        old_has_punct = bool(re.search(r'[.!?]', old_text))
+        old_has_caps = old_text != old_text.lower()
+        
+        # Better if it has punctuation or capitalization that the old one doesn't
+        return (new_has_punct and not old_has_punct) or (new_has_caps and not old_has_caps)
+    
     def on_transcript_received(transcript: str, is_final: bool):
         """Callback for when transcript is received"""
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # If the loop is already running, use asyncio.run_coroutine_threadsafe
+            # Only send interim results for UI feedback
+            if not is_final:
+                message = {
+                    "type": "interim_transcript",
+                    "text": transcript,
+                    "timestamp": datetime.now().isoformat()
+                }
+                # Put message in queue using the stored loop reference
                 asyncio.run_coroutine_threadsafe(
-                    websocket.send_text(json.dumps({
-                        "type": "transcript",
-                        "text": transcript,
-                        "is_final": is_final,
-                        "timestamp": datetime.now().isoformat()
-                    })),
-                    loop
+                    message_queue.put(message), 
+                    main_loop
                 )
-            else:
-                logger.warning("Event loop is not running")
-
         except Exception as e:
-            logger.error(f"Error sending transcript: {e}")
+            logger.error(f"Error queuing interim transcript: {e}")
+    
+    def on_turn_end(final_transcript: str):
+        """Callback when turn ends - user stopped talking"""
+        nonlocal last_transcript, last_transcript_time
+        
+        try:
+            logger.info(f"Turn ended with final transcript: {final_transcript}")
+            
+            # Normalize for comparison
+            normalized_new = normalize_transcript(final_transcript)
+            normalized_last = normalize_transcript(last_transcript)
+            
+            current_time = datetime.now()
+            
+            # Check if this is a duplicate (same content within 2 seconds)
+            if (normalized_new == normalized_last and 
+                last_transcript_time and 
+                (current_time - last_transcript_time).total_seconds() < 2):
+                
+                # Check if new version is better formatted
+                if is_better_formatted(final_transcript, last_transcript):
+                    logger.info(f"Updating with better formatted version: {final_transcript}")
+                    
+                    # Send update message to replace the previous one
+                    message = {
+                        "type": "turn_update",
+                        "text": final_transcript,
+                        "timestamp": current_time.isoformat(),
+                        "message": "Updated with better formatting"
+                    }
+                    asyncio.run_coroutine_threadsafe(
+                        message_queue.put(message), 
+                        main_loop
+                    )
+                else:
+                    logger.info(f"Skipped duplicate: {final_transcript}")
+                    return
+            else:
+                # This is a new unique transcript
+                logger.info(f"Sent to UI: {final_transcript}")
+                
+                # Send final transcript and turn end notification
+                message = {
+                    "type": "turn_end",
+                    "text": final_transcript,
+                    "timestamp": current_time.isoformat(),
+                    "message": "User stopped talking"
+                }
+                asyncio.run_coroutine_threadsafe(
+                    message_queue.put(message), 
+                    main_loop
+                )
+            
+            # Update last transcript tracking
+            last_transcript = final_transcript
+            last_transcript_time = current_time
+            
+        except Exception as e:
+            logger.error(f"Error queuing turn end: {e}")
     
     try:
         while True:
@@ -100,27 +201,27 @@ async def websocket_endpoint(websocket: WebSocket):
                         data = json.loads(message["text"])
                         
                         if data.get("command") == "start_recording":
-                            logger.info("Starting recording session")
+                            logger.info("Starting turn detection recording session")
                             transcriber = AssemblyAIStreamingTranscriber(sample_rate=16000)
-                            if transcriber.start_streaming(on_transcript_received):
+                            if transcriber.start_streaming(on_transcript_received, on_turn_end):
                                 await websocket.send_text(json.dumps({
                                     "type": "status",
-                                    "message": "Recording started - speak now!"
+                                    "message": "Turn detection started - speak and pause to see results!"
                                 }))
                             else:
                                 await websocket.send_text(json.dumps({
                                     "type": "error",
-                                    "message": "Failed to start transcription service"
+                                    "message": "Failed to start turn detection service"
                                 }))
                         
                         elif data.get("command") == "stop_recording":
-                            logger.info("Stopping recording session")
+                            logger.info("Stopping turn detection recording session")
                             if transcriber:
                                 transcriber.stop_streaming()
                                 transcriber = None
                             await websocket.send_text(json.dumps({
                                 "type": "status",
-                                "message": "Recording stopped"
+                                "message": "Turn detection stopped"
                             }))
                     except json.JSONDecodeError:
                         logger.error("Invalid JSON received")
@@ -129,7 +230,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     # Handle audio data
                     audio_data = message["bytes"]
                     if transcriber and len(audio_data) > 0:
-                        logger.debug(f"Streaming {len(audio_data)} bytes of audio")
+                        logger.debug(f"Streaming {len(audio_data)} bytes of audio for turn detection")
                         transcriber.stream_audio(audio_data)
 
     except WebSocketDisconnect:
@@ -137,8 +238,17 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
+        # Cleanup
         if transcriber:
             transcriber.stop_streaming()
+        
+        # Stop the sender task
+        await message_queue.put(None)  # Shutdown signal
+        sender_task.cancel()
+        try:
+            await sender_task
+        except asyncio.CancelledError:
+            pass
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):

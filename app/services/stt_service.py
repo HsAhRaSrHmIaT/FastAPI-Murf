@@ -5,9 +5,8 @@ from app.core.logging import get_logger
 from app.models.schemas import TranscriptionResponse
 from assemblyai.streaming.v3 import (
     StreamingClient, StreamingClientOptions, StreamingParameters, 
-    StreamingEvents, BeginEvent, TurnEvent, TerminationEvent, StreamingError
+    StreamingEvents
 )
-import asyncio
 from typing import Optional, Callable
 
 logger = get_logger(__name__)
@@ -19,7 +18,9 @@ class AssemblyAIStreamingTranscriber:
         self.sample_rate = sample_rate
         self.client = None
         self.on_transcript_callback: Optional[Callable] = None
-        
+        self.on_turn_end_callback: Optional[Callable] = None
+        self.current_turn_transcript = ""
+
         if not settings.assemblyai_api_key:
             logger.warning("AssemblyAI API key not found")
             return
@@ -27,7 +28,7 @@ class AssemblyAIStreamingTranscriber:
         aai.settings.api_key = settings.assemblyai_api_key
         logger.info(f"Initializing AssemblyAI streaming with sample rate: {sample_rate}")
         
-    def start_streaming(self, on_transcript: Callable = None):
+    def start_streaming(self, on_transcript: Callable = None, on_turn_end: Callable = None):
         """Start streaming transcription session"""
         if not settings.assemblyai_api_key:
             logger.error("Cannot start streaming: AssemblyAI API key not configured")
@@ -35,6 +36,8 @@ class AssemblyAIStreamingTranscriber:
             
         try:
             self.on_transcript_callback = on_transcript
+            self.on_turn_end_callback = on_turn_end
+            self.current_turn_transcript = ""
             
             self.client = StreamingClient(
                 StreamingClientOptions(
@@ -53,7 +56,9 @@ class AssemblyAIStreamingTranscriber:
             self.client.connect(StreamingParameters(
                 sample_rate=self.sample_rate,
                 format_turns=True,
-                interim_results=True
+                interim_results=True,
+                end_of_turn_silence_threshold=500,
+                voice_activity_threshold=0.5
             ))
             
             logger.info("AssemblyAI streaming session started successfully")
@@ -95,19 +100,45 @@ class AssemblyAIStreamingTranscriber:
         """Handle turn event with transcript"""
         try:
             transcript = getattr(event, 'transcript', '').strip()
+            is_end_of_turn = getattr(event, 'end_of_turn', False)
+
             if transcript:
-                is_final = getattr(event, 'end_of_turn', False)
-                
-                logger.info(f"Transcript: {transcript} (final: {is_final})")
-                print(f"[TRANSCRIPTION] {transcript}")
-                print(f"   - Final: {is_final}")
-                
-                # Call callback if provided
+                self.current_turn_transcript = transcript
+
+                logger.info(f"Turn Transcript: {transcript} (end_of_turn: {is_end_of_turn})")
+                print(f"[TURN] {transcript}")
+                print(f"   - End of Turn: {is_end_of_turn}")
+
+                if is_end_of_turn:
+                    print(f"[TURN COMPLETE] Final: {transcript}")
+                    print("   - User stopped talking")
+
+                    # ONLY send to UI when turn actually ends (user paused)
+                    if self.on_turn_end_callback:
+                        try:
+                            self.on_turn_end_callback(transcript)
+                        except Exception as e:
+                            logger.error(f"Error in turn end callback: {e}")
+
+                    self.current_turn_transcript = ""
+                else:
+                    # Interim result during speaking - only send for real-time feedback
+                    print("   - Still speaking (interim)")
+                    
+                    # Send interim results for status display only
+                    if self.on_transcript_callback:
+                        try:
+                            self.on_transcript_callback(transcript, False, False)
+                        except Exception as e:
+                            logger.error(f"Error in transcript callback: {e}")
+
+            else:
                 if self.on_transcript_callback:
                     try:
-                        self.on_transcript_callback(transcript, is_final)
+                        self.on_transcript_callback(transcript, False, False)
                     except Exception as e:
                         logger.error(f"Error in transcript callback: {e}")
+
         except Exception as e:
             logger.error(f"Error in _on_turn: {e}")
     
