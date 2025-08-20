@@ -7,6 +7,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from app.core.logging import get_logger
 from app.services.stt_service import AssemblyAIStreamingTranscriber
+from app.services.llm_service import llm_service
 
 logger = get_logger(__name__)
 
@@ -22,6 +23,7 @@ class TurnDetectionWebSocketHandler:
         self.sender_task = None
         self.last_transcript = ""
         self.last_transcript_time = None
+        self.session_id = f"ws_{datetime.now().strftime('%Y%m%d_%H%M%S')}"  # Unique session ID
     
     async def connect(self):
         """Accept WebSocket connection and initialize"""
@@ -147,6 +149,9 @@ class TurnDetectionWebSocketHandler:
                     "message": "User stopped talking"
                 }
                 self._queue_message(message)
+                
+                # Now send the transcript to LLM for streaming response
+                self._process_transcript_with_llm(final_transcript)
             
             # Update last transcript tracking
             self.last_transcript = final_transcript
@@ -154,6 +159,85 @@ class TurnDetectionWebSocketHandler:
             
         except Exception as e:
             logger.error(f"Error handling turn end: {e}")
+    
+    def _process_transcript_with_llm(self, transcript: str):
+        """Process transcript with LLM and stream response"""
+        try:
+            # Queue the LLM processing as an async task
+            if self.main_loop:
+                asyncio.run_coroutine_threadsafe(
+                    self._stream_llm_response(transcript),
+                    self.main_loop
+                )
+        except Exception as e:
+            logger.error(f"Error starting LLM processing: {e}")
+    
+    async def _stream_llm_response(self, transcript: str):
+        """Stream LLM response to the WebSocket"""
+        try:
+            # Send thinking status
+            await self.message_queue.put({
+                "type": "llm_thinking",
+                "message": "AI is thinking...",
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            if not llm_service.is_available():
+                await self.message_queue.put({
+                    "type": "llm_error",
+                    "message": "AI service is not available",
+                    "timestamp": datetime.now().isoformat()
+                })
+                return
+            
+            logger.info(f"Sending transcript to LLM: '{transcript[:50]}...'")
+            print(f"[LLM] Processing: {transcript}")
+            
+            # Send start of streaming response
+            await self.message_queue.put({
+                "type": "llm_response_start",
+                "message": "AI response starting...",
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            accumulated_response = ""
+            chunk_count = 0
+            
+            # Stream response from LLM
+            async for chunk in llm_service.generate_streaming_response(transcript, self.session_id):
+                chunk_count += 1
+                accumulated_response += chunk
+                
+                # Send each chunk to the WebSocket
+                await self.message_queue.put({
+                    "type": "llm_response_chunk",
+                    "chunk": chunk,
+                    "accumulated": accumulated_response,
+                    "chunk_number": chunk_count,
+                    "timestamp": datetime.now().isoformat()
+                })
+                
+                # Print to console as requested
+                print(f"[LLM Chunk {chunk_count}] {chunk}", end="", flush=True)
+            
+            # Send completion notification
+            await self.message_queue.put({
+                "type": "llm_response_complete",
+                "final_response": accumulated_response,
+                "total_chunks": chunk_count,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            print(f"\n[LLM] Complete response ({chunk_count} chunks): {accumulated_response}")
+            logger.info(f"LLM streaming complete. Total chunks: {chunk_count}, Final length: {len(accumulated_response)}")
+            
+        except Exception as e:
+            logger.error(f"Error streaming LLM response: {e}")
+            await self.message_queue.put({
+                "type": "llm_error",
+                "message": f"Error generating AI response: {str(e)}",
+                "timestamp": datetime.now().isoformat()
+            })
     
     async def handle_command(self, command: str):
         """Handle WebSocket commands"""

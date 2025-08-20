@@ -17,9 +17,9 @@ logger = get_logger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
-    title="Real-time Voice Transcription API",
-    description="AI-powered real-time voice transcription with turn detection using WebSocket streaming",
-    version="2.0.0",
+    title="AI Voice Chat API",
+    description="AI-powered real-time voice conversation with speech-to-speech pipeline using streaming LLM responses",
+    version="2.1.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -41,20 +41,20 @@ templates = Jinja2Templates(directory="templates")
 # Include API routes
 app.include_router(health.router)
 
-logger.info("Voice Agent API initialized successfully")
+logger.info("AI Voice Chat API initialized successfully")
 
 # WebSocket endpoint using the refactored handler
 app.websocket("/ws")(websocket_endpoint)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    logger.info("Main interface requested")
+    logger.info("AI Voice Chat interface requested")
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.on_event("startup")
 async def startup_event():
     """Application startup event"""
-    logger.info(f"Real-time Voice Transcription API starting up on {settings.host}:{settings.port}")
+    logger.info(f"AI Voice Chat API starting up on {settings.host}:{settings.port}")
     logger.info(f"Debug mode: {settings.debug}")
     
     # Log service availability
@@ -67,7 +67,7 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown event"""
-    logger.info("Real-time Voice Transcription API shutting down")
+    logger.info("AI Voice Chat API shutting down")
 
 if __name__ == "__main__":
     import uvicorn

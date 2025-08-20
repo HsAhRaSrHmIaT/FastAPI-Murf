@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     
     # API Keys
     assemblyai_api_key: Optional[str] = os.getenv("ASSEMBLYAI_API_KEY")
+    google_api_key: Optional[str] = os.getenv("GOOGLE_API_KEY")
     
     # Server Settings
     host: str = "0.0.0.0"
