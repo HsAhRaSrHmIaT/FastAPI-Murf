@@ -128,14 +128,14 @@ class AssemblyAIStreamingTranscriber:
                     # Send interim results for status display only
                     if self.on_transcript_callback:
                         try:
-                            self.on_transcript_callback(transcript, False, False)
+                            self.on_transcript_callback(transcript, False)
                         except Exception as e:
                             logger.error(f"Error in transcript callback: {e}")
 
             else:
                 if self.on_transcript_callback:
                     try:
-                        self.on_transcript_callback(transcript, False, False)
+                        self.on_transcript_callback(transcript, False)
                     except Exception as e:
                         logger.error(f"Error in transcript callback: {e}")
 
