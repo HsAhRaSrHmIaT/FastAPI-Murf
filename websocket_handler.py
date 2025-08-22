@@ -8,6 +8,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from app.core.logging import get_logger
 from app.services.stt_service import AssemblyAIStreamingTranscriber
 from app.services.llm_service import llm_service
+from app.services.tts_service import tts_service
 
 logger = get_logger(__name__)
 
@@ -230,7 +231,21 @@ class TurnDetectionWebSocketHandler:
             
             print(f"\n[LLM] Complete response ({chunk_count} chunks): {accumulated_response}")
             logger.info(f"LLM streaming complete. Total chunks: {chunk_count}, Final length: {len(accumulated_response)}")
-            
+
+            # Send accumulated LLM response to TTS service and print base64 audio
+            try:
+                audio_b64 = await tts_service(accumulated_response)
+                # The tts_service function already prints the base64 audio to the console
+                logger.info(f"Generated audio for LLM response (base64): {audio_b64[:100]}... (length: {len(audio_b64)})")
+                if audio_b64:
+                    await self.message_queue.put({
+                        "type": "tts_response",
+                        "audio": audio_b64,
+                        "timestamp": datetime.now().isoformat()
+                    })
+            except Exception as tts_exc:
+                logger.error(f"Error sending LLM response to TTS service: {tts_exc}")
+
         except Exception as e:
             logger.error(f"Error streaming LLM response: {e}")
             await self.message_queue.put({

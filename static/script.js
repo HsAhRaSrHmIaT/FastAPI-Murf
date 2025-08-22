@@ -37,6 +37,10 @@ function connectWebSocket() {
     websocket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         handleWebSocketMessage(data);
+
+        if (data.type === "tts_response") {
+            console.log(`Generated audio for LLM response (base64): ${data.audio.slice(0, 100)}... (length: ${data.audio.length})`);
+        }
     };
 
     websocket.onclose = () => {
@@ -68,42 +72,36 @@ function handleWebSocketMessage(data) {
             }
             break;
         case "interim_transcript":
-            // Show interim results in the status area
-            console.log("Received interim transcript:", data.text);
+            // console.log("Received interim transcript:", data.text);
             interimText.textContent = `Speaking: "${data.text}"`;
             realTimeStatus.textContent = "Processing speech...";
             break;
         case "turn_end":
-            // Turn ended - display final transcript
             addTurnTranscript(data.text);
             interimText.textContent = "";
             realTimeStatus.textContent = "🤖 Processing with AI...";
             break;
         case "turn_update":
-            // Update the last turn with better formatted text
             updateLastTurnTranscript(data.text);
             break;
         case "llm_thinking":
-            // AI is thinking
             realTimeStatus.textContent = "🤖 AI is thinking...";
             addSystemMessage("AI is processing your message...", "info");
             break;
         case "llm_response_start":
-            // AI response starting
             realTimeStatus.textContent = "🤖 AI is responding...";
             startAIResponse();
             break;
         case "llm_response_chunk":
-            // Stream AI response chunk
+            // console.log("LLM chunk received:", data.chunk);
             appendAIResponseChunk(data.chunk);
             break;
         case "llm_response_complete":
-            // AI response complete
+            // console.log("WebSocket message received:", data.final_response);
             completeAIResponse(data.final_response);
             realTimeStatus.textContent = "🎤 Ready for your next message...";
             break;
         case "llm_error":
-            // AI error
             addSystemMessage(data.message, "error");
             realTimeStatus.textContent = "🎤 Ready for your next message...";
             break;
@@ -351,7 +349,7 @@ function addTurnTranscript(text) {
                     text
                 )}</p>
                 <div class="flex items-center justify-between mt-2 pt-2 border-t border-green-400/20">
-                    <span class="text-xs text-green-200/70">🎤 Turn Complete</span>
+                    <span class="text-xs text-green-200/70">👨🏻User</span>
                     <span class="text-xs text-green-200/70">${new Date().toLocaleTimeString()}</span>
                 </div>
             </div>
@@ -406,8 +404,6 @@ function escapeHtml(text) {
 
 // Initialize on page load
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("External script loaded, initializing...");
-
     // Get DOM elements
     startBtn = document.getElementById("startBtn");
     stopBtn = document.getElementById("stopBtn");
@@ -417,16 +413,6 @@ document.addEventListener("DOMContentLoaded", function () {
     realTimeStatus = document.getElementById("realTimeStatus");
     interimText = document.getElementById("interimText");
     transcriptionContainer = document.getElementById("transcriptionContainer");
-
-    console.log("Elements found:", {
-        startBtn: !!startBtn,
-        stopBtn: !!stopBtn,
-        clearBtn: !!clearBtn,
-        connectionStatus: !!connectionStatus,
-        realTimeStatus: !!realTimeStatus,
-        interimText: !!interimText,
-        transcriptionContainer: !!transcriptionContainer,
-    });
 
     // Event listeners
     if (startBtn) startBtn.addEventListener("click", startRecording);
