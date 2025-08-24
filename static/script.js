@@ -5,6 +5,9 @@ let audioStream = null;
 let isRecording = false;
 let turnCount = 0;
 
+// Audio playback variables
+let playbackAudioContext = null;
+
 let startBtn,
     stopBtn,
     clearBtn,
@@ -13,6 +16,57 @@ let startBtn,
     realTimeStatus,
     interimText,
     transcriptionContainer;
+
+// Initialize audio context for playback
+async function initializePlaybackAudio() {
+    if (!playbackAudioContext) {
+        playbackAudioContext = new (window.AudioContext || window.webkitAudioContext)({
+            sampleRate: 44100
+        });
+    }
+    
+    // Resume context if suspended (required by browser policies)
+    if (playbackAudioContext.state === 'suspended') {
+        await playbackAudioContext.resume();
+    }
+}
+
+// Play base64 audio data
+async function playAudioFromBase64(base64Audio) {
+    try {
+        await initializePlaybackAudio();
+        
+        const binaryString = atob(base64Audio);
+        const arrayBuffer = new ArrayBuffer(binaryString.length);
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        for (let i = 0; i < binaryString.length; i++) {
+            uint8Array[i] = binaryString.charCodeAt(i);
+        }
+        
+        const audioBuffer = await playbackAudioContext.decodeAudioData(arrayBuffer);
+        
+        const source = playbackAudioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(playbackAudioContext.destination);
+        
+        console.log("Playing TTS audio...");
+        source.start(0);
+        
+        // Add visual feedback
+        realTimeStatus.textContent = "🔊 Playing AI response...";
+        
+        // Reset status when audio ends
+        source.onended = () => {
+            realTimeStatus.textContent = "🎤 Ready for your next message...";
+        };
+        
+    } catch (error) {
+        console.error("Error playing audio:", error);
+        addSystemMessage("Failed to play audio: " + error.message, "error");
+        realTimeStatus.textContent = "🎤 Ready for your next message...";
+    }
+}
 
 // Connect to WebSocket
 function connectWebSocket() {
@@ -37,10 +91,6 @@ function connectWebSocket() {
     websocket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         handleWebSocketMessage(data);
-
-        if (data.type === "tts_response") {
-            console.log(`Generated audio for LLM response (base64): ${data.audio.slice(0, 100)}... (length: ${data.audio.length})`);
-        }
     };
 
     websocket.onclose = () => {
@@ -100,6 +150,13 @@ function handleWebSocketMessage(data) {
             // console.log("WebSocket message received:", data.final_response);
             completeAIResponse(data.final_response);
             realTimeStatus.textContent = "🎤 Ready for your next message...";
+            break;
+        case "tts_response":
+            // Handle TTS audio response
+            console.log(`Received TTS audio (base64 length: ${data.audio.length})`);
+            if (data.audio) {
+                playAudioFromBase64(data.audio);
+            }
             break;
         case "llm_error":
             addSystemMessage(data.message, "error");
@@ -225,6 +282,9 @@ registerProcessor('audio-processor', AudioProcessor);
 
 async function startRecording() {
     try {
+        // Initialize playback audio context early (user interaction required)
+        await initializePlaybackAudio();
+        
         // Get audio stream
         audioStream = await navigator.mediaDevices.getUserMedia({
             audio: {

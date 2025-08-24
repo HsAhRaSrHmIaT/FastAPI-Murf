@@ -21,7 +21,7 @@ class LLMService:
             
         try:
             genai.configure(api_key=settings.google_api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.model = genai.GenerativeModel('gemini-2.5-flash')
             logger.info("LLM service initialized with Google Gemini 1.5 Flash")
         except Exception as e:
             logger.error(f"Failed to initialize Gemini model: {e}")
