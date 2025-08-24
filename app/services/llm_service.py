@@ -22,7 +22,7 @@ class LLMService:
         try:
             genai.configure(api_key=settings.google_api_key)
             self.model = genai.GenerativeModel('gemini-2.5-flash')
-            logger.info("LLM service initialized with Google Gemini 1.5 Flash")
+            logger.info("LLM service initialized with Google Gemini 2.5 Flash")
         except Exception as e:
             logger.error(f"Failed to initialize Gemini model: {e}")
             self.model = None
@@ -103,7 +103,7 @@ Avoid overly formal language and keep responses under 300 words unless specifica
                 stream=True,
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.7,
-                    max_output_tokens=300,
+                    max_output_tokens=2000,
                     top_p=0.9
                 )
             )
