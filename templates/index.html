@@ -68,7 +68,11 @@
                     <div
                         id="transcriptionContainer"
                         class="flex-1 p-6 overflow-y-auto space-y-4 min-h-0"
-                        style="max-height: calc(100vh - 350px); scrollbar-width: thin; scrollbar-color: #e3d5ee transparent;"
+                        style="
+                            max-height: calc(100vh - 350px);
+                            scrollbar-width: thin;
+                            scrollbar-color: #e3d5ee transparent;
+                        "
                     >
                         <div class="text-center text-gray-400 mt-8">
                             <p>
@@ -84,7 +88,7 @@
 
                     <!-- Controls -->
                     <div
-                        class="p-3 border-t border-white/10 bg-white/5 rounded-3xl rounded-t-none flex-shrink-0"
+                        class="p-3 border-t border-white/10 bg-white/5 rounded-3xl rounded-t-none flex-shrink-0 mt-auto"
                     >
                         <div class="text-center mb-4">
                             <h3 class="text-lg font-semibold text-white mb-1">
@@ -95,30 +99,35 @@
                                 instant responses
                             </p>
                         </div>
-                        <div class="flex flex-col sm:flex-row justify-center gap-4 mb-4">
+                        <div class="flex justify-center gap-4 mb-4">
                             <button
-                                id="startBtn"
-                                class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg flex items-center gap-2 transition-all duration-200"
+                                id="toggleChatBtn"
+                                class="bg-white/5 border border-white/10 w-16 h-16 rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:bg-green-400/50 hover:border-green-400 shadow-lg"
                             >
-                                <div
-                                    class="w-3 h-3 bg-white rounded-full"
-                                ></div>
-                                Start AI Chat
-                            </button>
-                            <button
-                                id="stopBtn"
-                                class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg flex items-center gap-2 opacity-50 cursor-not-allowed transition-all duration-200"
-                                disabled
-                            >
-                                <div class="w-3 h-3 bg-white rounded-sm"></div>
-                                Stop Chat
+                                <span id="toggleChatText">
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="32px"
+                                        height="32px"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                    >
+                                        <path
+                                            d="M20 12V13C20 17.4183 16.4183 21 12 21C7.58172 21 4 17.4183 4 13V12M12 17C9.79086 17 8 15.2091 8 13V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V13C16 15.2091 14.2091 17 12 17Z"
+                                            stroke="#ffffff"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        />
+                                    </svg>
+                                </span>
                             </button>
                             <button
                                 id="clearBtn"
-                                class="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-semibold py-3 px-6 rounded-xl shadow-lg flex items-center gap-2 transition-all duration-200"
+                                class="bg-white/5 border border-white/10 w-16 h-16 rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:bg-red-400/50 shadow-lg hover:border-red-400"
                             >
                                 <svg
-                                    class="w-4 h-4"
+                                    class="w-8 h-8"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -130,7 +139,6 @@
                                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                                     ></path>
                                 </svg>
-                                Clear
                             </button>
                         </div>
                     </div>
@@ -142,6 +150,7 @@
             <p class="text-gray-400 text-sm">
                 Powered by
                 <span class="text-purple-400 font-semibold">FastAPI</span>,
+                <span class="text-pink-400 font-semibold">MurfAI</span>,
                 <span class="text-green-400 font-semibold">AssemblyAI</span> &
                 <span class="text-blue-400 font-semibold">Google Gemini</span>
             </p>

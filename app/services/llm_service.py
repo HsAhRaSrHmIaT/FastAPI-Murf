@@ -87,7 +87,7 @@ class LLMService:
             # Create system prompt
             system_prompt = """You are a helpful AI assistant having a natural conversation through voice. 
 Keep your responses conversational, concise, and engaging. Respond as if you're speaking to the person directly.
-Avoid overly formal language and keep responses under 150 words unless specifically asked for more detail."""
+Avoid overly formal language and keep responses under 300 words unless specifically asked for more detail."""
             
             # Build the full prompt
             if context:

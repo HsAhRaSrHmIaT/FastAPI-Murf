@@ -8,8 +8,8 @@ let turnCount = 0;
 // Audio playback variables
 let playbackAudioContext = null;
 
-let startBtn,
-    stopBtn,
+let toggleChatBtn,
+    toggleChatText,
     clearBtn,
     connectionStatus,
     listeningStatus,
@@ -20,13 +20,14 @@ let startBtn,
 // Initialize audio context for playback
 async function initializePlaybackAudio() {
     if (!playbackAudioContext) {
-        playbackAudioContext = new (window.AudioContext || window.webkitAudioContext)({
-            sampleRate: 44100
+        playbackAudioContext = new (window.AudioContext ||
+            window.webkitAudioContext)({
+            sampleRate: 44100,
         });
     }
-    
+
     // Resume context if suspended (required by browser policies)
-    if (playbackAudioContext.state === 'suspended') {
+    if (playbackAudioContext.state === "suspended") {
         await playbackAudioContext.resume();
     }
 }
@@ -35,32 +36,33 @@ async function initializePlaybackAudio() {
 async function playAudioFromBase64(base64Audio) {
     try {
         await initializePlaybackAudio();
-        
+
         const binaryString = atob(base64Audio);
         const arrayBuffer = new ArrayBuffer(binaryString.length);
         const uint8Array = new Uint8Array(arrayBuffer);
-        
+
         for (let i = 0; i < binaryString.length; i++) {
             uint8Array[i] = binaryString.charCodeAt(i);
         }
-        
-        const audioBuffer = await playbackAudioContext.decodeAudioData(arrayBuffer);
-        
+
+        const audioBuffer = await playbackAudioContext.decodeAudioData(
+            arrayBuffer
+        );
+
         const source = playbackAudioContext.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(playbackAudioContext.destination);
-        
+
         console.log("Playing TTS audio...");
         source.start(0);
-        
+
         // Add visual feedback
         realTimeStatus.textContent = "🔊 Playing AI response...";
-        
+
         // Reset status when audio ends
         source.onended = () => {
             realTimeStatus.textContent = "🎤 Ready for your next message...";
         };
-        
     } catch (error) {
         console.error("Error playing audio:", error);
         addSystemMessage("Failed to play audio: " + error.message, "error");
@@ -153,7 +155,9 @@ function handleWebSocketMessage(data) {
             break;
         case "tts_response":
             // Handle TTS audio response
-            console.log(`Received TTS audio (base64 length: ${data.audio.length})`);
+            console.log(
+                `Received TTS audio (base64 length: ${data.audio.length})`
+            );
             if (data.audio) {
                 playAudioFromBase64(data.audio);
             }
@@ -284,7 +288,7 @@ async function startRecording() {
     try {
         // Initialize playback audio context early (user interaction required)
         await initializePlaybackAudio();
-        
+
         // Get audio stream
         audioStream = await navigator.mediaDevices.getUserMedia({
             audio: {
@@ -330,7 +334,6 @@ async function startRecording() {
         websocket.send(JSON.stringify({ command: "start_recording" }));
 
         isRecording = true;
-        updateButtonStates();
         realTimeStatus.textContent = "🎤 Starting AI voice chat...";
     } catch (error) {
         console.error("Error starting recording:", error);
@@ -363,7 +366,6 @@ function stopRecording() {
         }
 
         isRecording = false;
-        updateButtonStates();
         realTimeStatus.textContent = "AI voice chat stopped";
         interimText.textContent = "";
         listeningStatus.classList.add("hidden");
@@ -376,16 +378,6 @@ function clearTranscripts() {
     turnCount = 0;
     realTimeStatus.textContent = "Ready for AI voice conversation";
     interimText.textContent = "";
-}
-
-function updateButtonStates() {
-    startBtn.disabled = isRecording;
-    stopBtn.disabled = !isRecording;
-
-    startBtn.classList.toggle("opacity-50", isRecording);
-    stopBtn.classList.toggle("opacity-50", !isRecording);
-    startBtn.classList.toggle("cursor-not-allowed", isRecording);
-    stopBtn.classList.toggle("cursor-not-allowed", !isRecording);
 }
 
 function addTurnTranscript(text) {
@@ -464,9 +456,7 @@ function escapeHtml(text) {
 
 // Initialize on page load
 document.addEventListener("DOMContentLoaded", function () {
-    // Get DOM elements
-    startBtn = document.getElementById("startBtn");
-    stopBtn = document.getElementById("stopBtn");
+    toggleChatBtn = document.getElementById("toggleChatBtn");
     clearBtn = document.getElementById("clearBtn");
     connectionStatus = document.getElementById("connectionStatus");
     listeningStatus = document.getElementById("listeningStatus");
@@ -474,9 +464,51 @@ document.addEventListener("DOMContentLoaded", function () {
     interimText = document.getElementById("interimText");
     transcriptionContainer = document.getElementById("transcriptionContainer");
 
-    // Event listeners
-    if (startBtn) startBtn.addEventListener("click", startRecording);
-    if (stopBtn) stopBtn.addEventListener("click", stopRecording);
+    if (toggleChatBtn) {
+        toggleChatText = document.getElementById("toggleChatText");
+        toggleChatBtn.addEventListener("click", async () => {
+            if (!isRecording) {
+                await startRecording();
+                toggleChatText.innerHTML = `
+                                    <div
+                                        class="w-4 h-4 bg-white rounded-full animate-pulse"
+                                    ></div>
+                `;
+                toggleChatBtn.classList.add("bg-red-400/50", "border-red-400");
+                toggleChatBtn.classList.remove(
+                    "hover:bg-green-400/50",
+                    "hover:border-green-400"
+                );
+            } else {
+                stopRecording();
+                toggleChatText.innerHTML = `
+                <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="32px"
+                                        height="32px"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                    >
+                                        <path
+                                            d="M20 12V13C20 17.4183 16.4183 21 12 21C7.58172 21 4 17.4183 4 13V12M12 17C9.79086 17 8 15.2091 8 13V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V13C16 15.2091 14.2091 17 12 17Z"
+                                            stroke="#ffffff"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        />
+                                    </svg>
+                                    `;
+                toggleChatBtn.classList.remove(
+                    "bg-red-400/50",
+                    "border-red-400"
+                );
+                toggleChatBtn.classList.add(
+                    "hover:bg-green-400/50",
+                    "hover:border-green-400"
+                );
+            }
+        });
+    }
     if (clearBtn) clearBtn.addEventListener("click", clearTranscripts);
 
     console.log("Connecting to WebSocket...");

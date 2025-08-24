@@ -50,7 +50,7 @@ async def tts_service(text: str) -> str:
             while True:
                 response = await ws.recv()
                 data = json.loads(response)
-                print(f'Received data: {data}')
+                # print(f'Received data: {data}')
                 
                 if "audio" in data:
                     audio_b64 = data["audio"]
