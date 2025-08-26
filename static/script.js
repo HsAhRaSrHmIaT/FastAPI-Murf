@@ -7,6 +7,11 @@ let turnCount = 0;
 
 // Audio playback variables
 let playbackAudioContext = null;
+let currentTtsSource = null;
+// Flag to control whether incoming TTS should be played (stopRecording sets to false)
+let allowTtsPlayback = true;
+// Track all active TTS sources so we can stop them reliably
+let activeTtsSources = [];
 
 let toggleChatBtn,
     toggleChatText,
@@ -37,6 +42,12 @@ async function playAudioFromBase64(base64Audio) {
     try {
         await initializePlaybackAudio();
 
+        // If playback has been disabled (user pressed stop), ignore incoming TTS
+        if (!allowTtsPlayback) {
+            console.log("TTS playback suppressed - allowTtsPlayback=false");
+            return;
+        }
+
         const binaryString = atob(base64Audio);
         const arrayBuffer = new ArrayBuffer(binaryString.length);
         const uint8Array = new Uint8Array(arrayBuffer);
@@ -49,9 +60,23 @@ async function playAudioFromBase64(base64Audio) {
             arrayBuffer
         );
 
+        if (currentTtsSource) {
+            try {
+                currentTtsSource.stop();
+            } catch (error) {
+                currentTtsSource.disconnect();
+                currentTtsSource = null;
+                console.error("Error stopping current TTS source:", error);
+            }
+        }
+
         const source = playbackAudioContext.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(playbackAudioContext.destination);
+        currentTtsSource = source;
+
+        // Track this source so stopRecording can stop it even if references change
+        activeTtsSources.push(source);
 
         console.log("Playing TTS audio...");
         source.start(0);
@@ -61,6 +86,10 @@ async function playAudioFromBase64(base64Audio) {
 
         // Reset status when audio ends
         source.onended = () => {
+            // Remove from active list and clear currentTtsSource if it matches
+            const idx = activeTtsSources.indexOf(source);
+            if (idx !== -1) activeTtsSources.splice(idx, 1);
+            if (currentTtsSource === source) currentTtsSource = null;
             realTimeStatus.textContent = "🎤 Ready for your next message...";
         };
     } catch (error) {
@@ -81,7 +110,7 @@ function connectWebSocket() {
         console.log("WebSocket connected");
         connectionStatus.innerHTML =
             '<span class="text-green-300">● Connected</span>';
-        addSystemMessage("Connected to AI voice chat server", "success");
+        addSystemMessage("Connected to AI Calm Guide server", "success");
 
         // Test interim text element
         interimText.textContent = "Connection test - interim text working";
@@ -286,6 +315,10 @@ registerProcessor('audio-processor', AudioProcessor);
 
 async function startRecording() {
     try {
+        // Allow TTS playback when a new session starts
+        allowTtsPlayback = true;
+        activeTtsSources = activeTtsSources || [];
+
         // Initialize playback audio context early (user interaction required)
         await initializePlaybackAudio();
 
@@ -348,6 +381,41 @@ function stopRecording() {
     if (isRecording) {
         // Send stop command
         websocket.send(JSON.stringify({ command: "stop_recording" }));
+
+        // Disable further TTS playback from incoming messages
+        allowTtsPlayback = false;
+
+        // Stop and disconnect any active TTS sources
+        if (activeTtsSources && activeTtsSources.length > 0) {
+            activeTtsSources.forEach((s) => {
+                try {
+                    s.stop();
+                } catch (e) {
+                    // ignore
+                }
+                try {
+                    s.disconnect();
+                } catch (e) {
+                    // ignore
+                }
+            });
+            activeTtsSources = [];
+        }
+
+        // Also clear the single currentTtsSource reference
+        if (currentTtsSource) {
+            try {
+                currentTtsSource.stop();
+            } catch (error) {
+                /* Ignore */
+            }
+            try {
+                currentTtsSource.disconnect();
+            } catch (error) {
+                /* Ignore */
+            }
+            currentTtsSource = null;
+        }
 
         // Clean up audio resources
         if (audioWorkletNode) {

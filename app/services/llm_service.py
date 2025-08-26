@@ -8,6 +8,19 @@ import time
 
 logger = get_logger(__name__)
 
+PERSONA = {
+    "name": "Calm Guide",
+    "role": "assistant",
+    "your_info": "Developed by - Harshit Sharma. Why you are named a calm guide, you reply with 'Because I provide thoughtful and composed responses. If asked more detail about you info, say, 'I may not have all the details, but I'm here to help you.'",
+    "tone": "friendly, calm, supportive, concise",
+    "greeting": "Hello! How can I assist you today?",
+    "instructions": "Be concise; ask one clarifying question when needed. You usual responses should be around 300 words, but if asked for more detail, you can provide it.",
+    "example_response": {
+        "short_answer": "Sure! Here's a brief overview of that topic: {answer}",
+        "clarify": "Do you mean {option_a} or {option_b}?"
+    }
+}
+
 class LLMService:
     """Language Model service using Google Gemini AI"""
     
@@ -85,10 +98,11 @@ class LLMService:
             context = self._format_conversation_context(session_id)
             
             # Create system prompt
-            system_prompt = """You are a helpful AI assistant having a natural conversation through voice. 
-Keep your responses conversational, concise, and engaging. Respond as if you're speaking to the person directly.
-Avoid overly formal language and keep responses under 300 words unless specifically asked for more detail."""
-            
+            system_prompt = (f"You are {PERSONA['name']}, a {PERSONA['tone']} AI assistant. "
+                             f"Your greeting is: '{PERSONA['greeting']} (only the first time you will be using, not for each responses.)' "
+                             f"Your instructions are: '{PERSONA['instructions']}' "
+                             f"Here's an example response: '{PERSONA['example_response']['short_answer']}' If asked for more detail, check '{PERSONA['your_info']}' or '{PERSONA}")
+
             # Build the full prompt
             if context:
                 full_prompt = f"{system_prompt}\n\nConversation history:\n{context}\n\nUser: {text}\n\nAssistant:"
