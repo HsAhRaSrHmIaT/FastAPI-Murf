@@ -152,7 +152,22 @@ class TurnDetectionWebSocketHandler:
                 self._queue_message(message)
                 
                 # Now send the transcript to LLM for streaming response
-                self._process_transcript_with_llm(final_transcript)
+                # Check for search triggers before sending to LLM
+                lowered = final_transcript.lower().strip()
+                # Simple triggers: start with 'search for' or 'find' or 'search'
+                if lowered.startswith("search for ") or lowered.startswith("find ") or lowered.startswith("search "):
+                    # Extract the query phrase after the trigger word
+                    query = final_transcript.split(None, 2)[-1] if len(final_transcript.split()) > 1 else ""
+                    # Send a prompt to the UI to confirm (yellow message) with actions
+                    message = {
+                        "type": "search_prompt",
+                        "query": query,
+                        "message": f"Search results for: \"{query}\"\nOpen search page to view results in a new tab.",
+                        "timestamp": current_time.isoformat()
+                    }
+                    self._queue_message(message)
+                else:
+                    self._process_transcript_with_llm(final_transcript)
             
             # Update last transcript tracking
             self.last_transcript = final_transcript

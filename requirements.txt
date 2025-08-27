@@ -12,6 +12,8 @@ google-generativeai
 # HTTP client for external APIs
 requests==2.32.4
 aiofiles
+httpx==0.24.0
+beautifulsoup4==4.12.2
 
 # Data validation and settings
 pydantic==2.11.7

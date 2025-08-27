@@ -141,6 +141,9 @@ function connectWebSocket() {
 
 function handleWebSocketMessage(data) {
     switch (data.type) {
+        case "search_prompt":
+            showSearchPrompt(data.query, data.message);
+            break;
         case "connection":
             addSystemMessage(data.message, "info");
             break;
@@ -269,6 +272,169 @@ function updateLastTurnTranscript(newText) {
         lastCard.querySelector(".transcript-text").textContent = newText;
         console.log(`Updated last turn with: ${newText}`);
     }
+}
+
+// Show a yellow search confirmation prompt with Open Search and Cancel buttons
+function showSearchPrompt(query, message) {
+    // Create container
+    const prompt = document.createElement("div");
+    prompt.className = "mb-4 animate-fadeIn";
+    prompt.innerHTML = `
+    <div class="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-2xl p-4 border border-yellow-500/30">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">🔎</span>
+            </div>
+            <div class="flex-1">
+                <p class="text-white text-sm leading-relaxed">${escapeHtml(message)}</p>
+                <div class="mt-3 flex gap-2">
+                    <button class="open-search-btn bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-xl text-xs font-medium hover:from-yellow-400 hover:to-orange-400 transition-all duration-200 border border-yellow-400/30">Open search</button>
+                    <button class="summarize-search-btn bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-xl text-xs font-medium hover:from-orange-400 hover:to-red-400 transition-all duration-200 border border-orange-400/30">Summarize top 3</button>
+                    <button class="cancel-search-btn bg-white/5 text-white px-4 py-2 rounded-xl text-xs font-medium border border-white/20 hover:bg-white/10 transition-all duration-200">Cancel</button>
+                </div>
+                <div class="search-results mt-3"></div>
+                <div class="flex items-center justify-between mt-2 pt-2 border-t border-yellow-400/20">
+                    <span class="text-xs text-yellow-200/70">🔎 Search Request</span>
+                    <span class="text-xs text-yellow-200/70">${new Date().toLocaleTimeString()}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
+    transcriptionContainer.appendChild(prompt);
+    transcriptionContainer.scrollTop = transcriptionContainer.scrollHeight;
+
+    const openBtn = prompt.querySelector(".open-search-btn");
+    const cancelBtn = prompt.querySelector(".cancel-search-btn");
+    const resultsDiv = prompt.querySelector(".search-results");
+
+    let fetched = false;
+
+    openBtn.addEventListener("click", async () => {
+        if (fetched) return; // already fetched
+        // Call search API
+        try {
+            openBtn.textContent = "Searching...";
+            const res = await fetch(
+                `/api/search/duckduckgo?q=${encodeURIComponent(query)}`
+            );
+            if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+            const results = await res.json();
+            renderSearchResults(resultsDiv, results);
+            // Also open DuckDuckGo search page in a new tab
+            const ddUrl = `https://duckduckgo.com/?q=${encodeURIComponent(
+                query
+            )}`;
+            window.open(ddUrl, "_blank");
+            fetched = true;
+            openBtn.textContent = "Open search";
+        } catch (err) {
+            resultsDiv.textContent =
+                "Failed to fetch search results: " + err.message;
+            openBtn.textContent = "Open search";
+        }
+    });
+
+    const summarizeBtn = prompt.querySelector(".summarize-search-btn");
+    summarizeBtn.addEventListener("click", async () => {
+        try {
+            summarizeBtn.textContent = "Summarizing...";
+            const res = await fetch(
+                `/api/search/duckduckgo_summary?q=${encodeURIComponent(
+                    query
+                )}&n=3`
+            );
+            if (!res.ok) throw new Error(`Summary failed: ${res.status}`);
+            const json = await res.json();
+            // Render the returned summary in the AI response format
+            renderAiResponseFromText(json.summary);
+            // If audio returned, play it
+            if (json.audio) {
+                try {
+                    await playAudioFromBase64(json.audio);
+                } catch (e) {
+                    console.error("Failed to play summary audio:", e);
+                }
+            }
+            summarizeBtn.textContent = "Summarize top 3";
+            // Optionally remove the prompt after summarizing
+            prompt.remove();
+        } catch (err) {
+            resultsDiv.textContent = "Failed to get summary: " + err.message;
+            summarizeBtn.textContent = "Summarize top 3";
+        }
+    });
+
+    cancelBtn.addEventListener("click", () => {
+        prompt.remove();
+    });
+}
+
+// Render clickable search results into a container
+function renderSearchResults(container, results) {
+    if (!results || results.length === 0) {
+        container.textContent = "No results found.";
+        return;
+    }
+
+    const ul = document.createElement("ul");
+    ul.className = "space-y-2";
+    results.forEach((r) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<a href="${escapeHtml(
+            r.url
+        )}" target="_blank" class="text-sm text-blue-200 hover:underline">${escapeHtml(
+            r.title
+        )}</a>`;
+        ul.appendChild(li);
+    });
+    container.appendChild(ul);
+}
+
+// small helper to escape HTML
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Render summary text as an AI response card (to match existing UI cards)
+function renderAiResponseFromText(text) {
+    const responseElement = document.createElement("div");
+    responseElement.className = "mb-4 animate-fadeIn";
+    responseElement.innerHTML = `
+    <div class="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl p-4 border border-purple-500/30">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">🤖</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="ai-response-text text-white text-sm leading-relaxed break-words whitespace-pre-wrap"></p>
+                <div class="flex items-center justify-between mt-2 pt-2 border-t border-purple-400/20">
+                    <span class="text-xs text-purple-200/70">🤖 Search Summary</span>
+                    <span class="text-xs text-purple-200/70">${new Date().toLocaleTimeString()}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
+    // Set the text content directly to preserve formatting
+    const textElement = responseElement.querySelector('.ai-response-text');
+    textElement.textContent = text;
+
+    transcriptionContainer.appendChild(responseElement);
+    transcriptionContainer.scrollTop = transcriptionContainer.scrollHeight;
+}
+
+// Helper function to format text with proper line breaks and wrapping
+function formatTextForDisplay(text) {
+    // Ensure line breaks are preserved and long words are broken
+    return text.replace(/\n/g, '\n').trim();
 }
 
 // Audio processing worklet

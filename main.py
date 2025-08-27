@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.logging import setup_logging, get_logger
 from app.api import health
+from app.api import search
 from websocket_handler import websocket_endpoint
 
 # Setup logging
@@ -40,6 +41,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Include API routes
 app.include_router(health.router)
+app.include_router(search.router)
 
 logger.info("AI Voice Chat API initialized successfully")
 
