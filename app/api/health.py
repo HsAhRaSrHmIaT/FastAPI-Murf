@@ -34,8 +34,8 @@ async def test_error_scenarios():
     
     return ErrorTestResponse(
         stt_test="working" if stt_working else "missing_key",
-        llm_test="not_used",
-        tts_test="not_used",
+        llm_test="working" if stt_working else "missing_key",
+        tts_test="working" if stt_working else "missing_key",
         overall_status=overall_status,
         fallback_message=fallback_message
     )

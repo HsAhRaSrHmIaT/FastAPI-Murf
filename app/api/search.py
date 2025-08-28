@@ -4,6 +4,11 @@ import httpx
 from bs4 import BeautifulSoup
 from app.services.llm_service import llm_service
 from app.services.tts_service import tts_service
+import urllib.parse
+import asyncio
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
@@ -31,6 +36,33 @@ async def duckduckgo_search(q: str = Query(..., min_length=1)) -> List[Dict[str,
     soup = BeautifulSoup(html, "html.parser")
     results = []
 
+    def _unwrap_duckduckgo_link(href: str) -> str:
+        """Convert DuckDuckGo redirect links (/l/?uddg=...) to the actual target URL when possible.
+
+        If the link is already an absolute URL that's not a DDG redirect, return as-is. If parsing fails,
+        return the original href so the frontend can still try to open it.
+        """
+        try:
+            if not href:
+                return href
+            # Absolute DDG redirect
+            parsed = urllib.parse.urlparse(href)
+            if (parsed.netloc and 'duckduckgo.com' in parsed.netloc and parsed.path.startswith('/l/')) or href.startswith('/l/'):
+                # Extract uddg parameter
+                qs = urllib.parse.parse_qs(parsed.query)
+                uddg_vals = qs.get('uddg') or qs.get('u') or []
+                if uddg_vals:
+                    return urllib.parse.unquote(uddg_vals[0])
+                # If no uddg, return absolute DDG link
+                if not parsed.netloc:
+                    return urllib.parse.urljoin('https://duckduckgo.com', href)
+            # If href is relative path, try to make it absolute to duckduckgo
+            if href.startswith('/'):
+                return urllib.parse.urljoin('https://duckduckgo.com', href)
+            return href
+        except Exception:
+            return href
+
     # Try a few selectors to be resilient against markup changes
     try:
         anchors = soup.select(".result__a") or soup.select("a.result__a") or soup.select("a[href].result__a")
@@ -42,6 +74,8 @@ async def duckduckgo_search(q: str = Query(..., min_length=1)) -> List[Dict[str,
         for r in anchors:
             title = r.get_text(strip=True)
             href = r.get("href")
+            if href:
+                href = _unwrap_duckduckgo_link(href)
             if href and title and href not in seen:
                 results.append({"title": title, "url": href})
                 seen.add(href)
@@ -74,9 +108,30 @@ async def duckduckgo_summary(q: str = Query(..., min_length=1), n: int = Query(3
 
     soup = BeautifulSoup(html, "html.parser")
     results = []
+
+    def _unwrap_duckduckgo_link(href: str) -> str:
+        try:
+            if not href:
+                return href
+            parsed = urllib.parse.urlparse(href)
+            if (parsed.netloc and 'duckduckgo.com' in parsed.netloc and parsed.path.startswith('/l/')) or href.startswith('/l/'):
+                qs = urllib.parse.parse_qs(parsed.query)
+                uddg_vals = qs.get('uddg') or qs.get('u') or []
+                if uddg_vals:
+                    return urllib.parse.unquote(uddg_vals[0])
+                if not parsed.netloc:
+                    return urllib.parse.urljoin('https://duckduckgo.com', href)
+            if href.startswith('/'):
+                return urllib.parse.urljoin('https://duckduckgo.com', href)
+            return href
+        except Exception:
+            return href
+
     for r in soup.select(".result__a")[:n]:
         title = r.get_text(strip=True)
         href = r.get("href")
+        if href:
+            href = _unwrap_duckduckgo_link(href)
         if href and title:
             results.append({"title": title, "url": href})
 
@@ -96,13 +151,36 @@ async def duckduckgo_summary(q: str = Query(..., min_length=1), n: int = Query(3
 
     try:
         summary = await llm_service.generate_response(prompt, session_id="search_summary")
-        # Generate TTS audio for the summary (best-effort)
-        audio_b64 = ""
+
+        # For TTS, replace URLs with 'link to domain', but keep real URLs in summary for frontend
+        import re
+        def url_replacer(match):
+            url = match.group(0)
+            url_clean = url.strip('`').strip()
+            domain = re.sub(r'^https?://', '', url_clean).split('/')[0]
+            if domain:
+                return f'link to {domain}'
+            return 'link'
+
+        url_pattern = r'`?(https?://[^\s`]+)`?'
+        tts_text = re.sub(url_pattern, url_replacer, summary)
+
+        async def _run_tts_and_log(text: str):
+            try:
+                audio = await tts_service(text)
+                if audio:
+                    logger.info(f"Background TTS produced audio (length={len(audio)}) for search summary")
+                else:
+                    logger.info("Background TTS produced no audio for search summary")
+            except Exception as exc:
+                logger.error(f"Background TTS error: {exc}")
+
+        # Fire-and-forget: use TTS-friendly text for audio, but send real summary to frontend
         try:
-            audio_b64 = await tts_service(summary)
-        except Exception as e:
-            # Log or ignore TTS errors; return summary without audio
-            audio_b64 = ""
-        return {"summary": summary, "audio": audio_b64}
+            asyncio.create_task(_run_tts_and_log(tts_text))
+        except Exception:
+            logger.warning("Unable to schedule background TTS task")
+
+        return {"summary": summary, "audio": ""}
     except Exception as e:
         return {"summary": f"Error summarizing results: {str(e)}"}

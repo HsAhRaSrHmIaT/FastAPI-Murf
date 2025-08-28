@@ -17,6 +17,22 @@ async def tts_service(text: str) -> str:
     Returns the complete base64 audio data ready for browser playback.
     """
     try:
+        # Preprocess text: replace URLs with 'link to <domain>'
+        import re
+        def url_replacer(match):
+            url = match.group(0)
+            # Remove markdown formatting if present
+            url_clean = url.strip('`').strip()
+            # Extract domain
+            domain = re.sub(r'^https?://', '', url_clean).split('/')[0]
+            if domain:
+                return f'link to {domain}'
+            return 'link'
+
+        # Replace URLs in the text (http/https, bare or markdown/backtick-wrapped)
+        url_pattern = r'`?(https?://[^\s`]+)`?'
+        processed_text = re.sub(url_pattern, url_replacer, text)
+
         async with websockets.connect(
             f"{WS_URL}?api-key={API_KEY}&sample_rate=44100&channel_type=MONO&format=WAV"
         ) as ws:
@@ -34,9 +50,9 @@ async def tts_service(text: str) -> str:
             print(f'Sending voice config: {voice_config_msg}')
             await ws.send(json.dumps(voice_config_msg))
 
-            # Send text
+            # Send processed text
             text_msg = {
-                "text": text,
+                "text": processed_text,
                 "end": True,
                 "context_id": STATIC_CONTEXT_ID
             }

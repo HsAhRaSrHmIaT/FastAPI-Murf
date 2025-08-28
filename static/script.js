@@ -249,8 +249,8 @@ function appendAIResponseChunk(chunk) {
 
 function completeAIResponse(finalResponse) {
     if (currentAIResponseElement) {
-        // Ensure the final response is complete
-        currentAIResponseElement.textContent = finalResponse;
+        // Format the response to convert backtick-wrapped URLs to clickable links
+        currentAIResponseElement.innerHTML = formatSummaryText(finalResponse);
 
         // Add a subtle animation to indicate completion
         currentAIResponseElement.parentElement.style.animation =
@@ -286,11 +286,13 @@ function showSearchPrompt(query, message) {
                 <span class="text-white text-sm font-bold">🔎</span>
             </div>
             <div class="flex-1">
-                <p class="text-white text-sm leading-relaxed">${escapeHtml(message)}</p>
+                <p class="text-white text-sm leading-relaxed">${escapeHtml(
+                    message
+                )}</p>
                 <div class="mt-3 flex gap-2">
-                    <button class="open-search-btn bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-xl text-xs font-medium hover:from-yellow-400 hover:to-orange-400 transition-all duration-200 border border-yellow-400/30">Open search</button>
-                    <button class="summarize-search-btn bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-xl text-xs font-medium hover:from-orange-400 hover:to-red-400 transition-all duration-200 border border-orange-400/30">Summarize top 3</button>
-                    <button class="cancel-search-btn bg-white/5 text-white px-4 py-2 rounded-xl text-xs font-medium border border-white/20 hover:bg-white/10 transition-all duration-200">Cancel</button>
+                    <button class="open-search-btn bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:from-yellow-400 hover:to-orange-400 transition-all duration-200 border border-yellow-400/30">Open search</button>
+                    <button class="summarize-search-btn bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:from-orange-400 hover:to-red-400 transition-all duration-200 border border-orange-400/30">Summarize top 3</button>
+                    <button class="cancel-search-btn bg-white/5 text-white px-3 py-1 rounded-md text-xs font-medium border border-white/20 hover:bg-white/10 transition-all duration-200">Cancel</button>
                 </div>
                 <div class="search-results mt-3"></div>
                 <div class="flex items-center justify-between mt-2 pt-2 border-t border-yellow-400/20">
@@ -309,66 +311,161 @@ function showSearchPrompt(query, message) {
     const cancelBtn = prompt.querySelector(".cancel-search-btn");
     const resultsDiv = prompt.querySelector(".search-results");
 
-    let fetched = false;
-
-    openBtn.addEventListener("click", async () => {
-        if (fetched) return; // already fetched
-        // Call search API
+    // Fetch and display results immediately
+    (async () => {
+        resultsDiv.textContent = "Loading search results...";
         try {
-            openBtn.textContent = "Searching...";
             const res = await fetch(
                 `/api/search/duckduckgo?q=${encodeURIComponent(query)}`
             );
             if (!res.ok) throw new Error(`Search failed: ${res.status}`);
             const results = await res.json();
+            resultsDiv.textContent = "";
             renderSearchResults(resultsDiv, results);
-            // Also open DuckDuckGo search page in a new tab
-            const ddUrl = `https://duckduckgo.com/?q=${encodeURIComponent(
-                query
-            )}`;
-            window.open(ddUrl, "_blank");
-            fetched = true;
-            openBtn.textContent = "Open search";
         } catch (err) {
             resultsDiv.textContent =
                 "Failed to fetch search results: " + err.message;
-            openBtn.textContent = "Open search";
         }
+    })();
+
+    openBtn.addEventListener("click", () => {
+        // Only open DuckDuckGo in a new tab, don't fetch again
+        const ddUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+        window.open(ddUrl, "_blank");
     });
 
     const summarizeBtn = prompt.querySelector(".summarize-search-btn");
     summarizeBtn.addEventListener("click", async () => {
+        if (summarizeBtn.disabled) return; // Prevent multiple clicks
+        summarizeBtn.disabled = true;
+        summarizeBtn.innerHTML =
+            '<span class="animate-spin">⏳</span> Summarizing...';
+
         try {
-            summarizeBtn.textContent = "Summarizing...";
             const res = await fetch(
                 `/api/search/duckduckgo_summary?q=${encodeURIComponent(
                     query
                 )}&n=3`
             );
-            if (!res.ok) throw new Error(`Summary failed: ${res.status}`);
+            if (!res.ok)
+                throw new Error(
+                    `Summary failed: ${res.status} ${res.statusText}`
+                );
             const json = await res.json();
             // Render the returned summary in the AI response format
-            renderAiResponseFromText(json.summary);
-            // If audio returned, play it
-            if (json.audio) {
-                try {
-                    await playAudioFromBase64(json.audio);
-                } catch (e) {
-                    console.error("Failed to play summary audio:", e);
-                }
-            }
-            summarizeBtn.textContent = "Summarize top 3";
-            // Optionally remove the prompt after summarizing
+            const formattedSummary = formatSummaryText(json.summary);
+            renderAiResponseFromText(formattedSummary);
+
+            // Remove the prompt and reset UI immediately after showing summary
             prompt.remove();
+            summarizeBtn.innerHTML = "Summarize top 3";
+            summarizeBtn.disabled = false;
+
+            // If audio returned, play it (in background, don't block UI)
+            if (json.audio) {
+                playAudioFromBase64(json.audio).catch((e) => {
+                    console.error("Failed to play summary audio:", e);
+                    addSystemMessage(
+                        "Failed to play summary audio: " + e.message,
+                        "error"
+                    );
+                });
+            } else {
+                addSystemMessage(
+                    "No audio available for summary (e.g., API credits exhausted).",
+                    "info"
+                );
+            }
         } catch (err) {
-            resultsDiv.textContent = "Failed to get summary: " + err.message;
-            summarizeBtn.textContent = "Summarize top 3";
+            console.error("Error getting summary:", err);
+            resultsDiv.innerHTML = `<p class="text-red-300 text-sm">❌ Failed to get summary: ${err.message}. Please try again.</p>`;
+            summarizeBtn.innerHTML = "Summarize top 3";
+            summarizeBtn.disabled = false;
         }
     });
 
     cancelBtn.addEventListener("click", () => {
         prompt.remove();
     });
+}
+
+function formatSummaryText(summary) {
+    if (!summary || typeof summary !== "string") return "No summary available.";
+
+    // DuckDuckGo redirect URLs: extract only the real URL from uddg param
+    const ddgoRegex =
+        /https?:\/\/duckduckgo\\.com\/l\/\?uddg=([^&\s]+)(?:&rut=[^\s`]+)?/g;
+    summary = summary.replace(ddgoRegex, (match, encodedUrl) => {
+        try {
+            const actualUrl = decodeURIComponent(encodedUrl);
+            return `<a href="${actualUrl}" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">${actualUrl}</a>`;
+        } catch (e) {
+            return match;
+        }
+    });
+
+    // (URL: `...`) format
+    const urlInParens = /\(URL: `([^`]+)`\)/g;
+    summary = summary.replace(
+        urlInParens,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // Lines like: URL: `...`
+    const urlLine = /^\s*URL: `([^`]+)`/gm;
+    summary = summary.replace(
+        urlLine,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // Bare backtick-wrapped URLs
+    const bareBacktickUrl = /`(https?:\/\/[^`\s]+)`/g;
+    summary = summary.replace(
+        bareBacktickUrl,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // URLs in parentheses (e.g., (https://...))
+    const urlInPlainParens = /\((https?:\/\/[^\s)]+)\)/g;
+    summary = summary.replace(
+        urlInPlainParens,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // Plain URLs at end of line (e.g., 'URL: https://...')
+    const urlPlain = /URL:\s*(https?:\/\/[^\s)\]\}"<>]+)(?=\s|$)/g;
+    summary = summary.replace(
+        urlPlain,
+        'URL: <a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // Plain URLs anywhere in the text (not part of other patterns)
+    const plainUrl = /\b(https?:\/\/[^\s<>"']+)(?![^<]*>)/g;
+    summary = summary.replace(
+        plainUrl,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // Split lines and clean up formatting
+    let lines = summary
+        .split("\n")
+        .map((line) =>
+            line
+                .replace(/^([•*]+|\s*[*]+)\s*/, "") // Remove all leading asterisks, bullets, and spaces
+                .replace(/`+$/, "") // Remove trailing backticks
+                .replace(/\*\*/g, "") // Remove double asterisks
+                .trim()
+        )
+        .filter((line) => line.length > 0);
+
+    if (lines.length > 1) {
+        // Add bullets only to lines after the first
+        return [lines[0], ...lines.slice(1).map((line) => `• ${line}`)].join(
+            "\n"
+        );
+    }
+
+    return summary;
 }
 
 // Render clickable search results into a container
@@ -382,11 +479,21 @@ function renderSearchResults(container, results) {
     ul.className = "space-y-2";
     results.forEach((r) => {
         const li = document.createElement("li");
-        li.innerHTML = `<a href="${escapeHtml(
-            r.url
-        )}" target="_blank" class="text-sm text-blue-200 hover:underline">${escapeHtml(
-            r.title
-        )}</a>`;
+        const urlDomain = r.url.replace(/^https?:\/\//, "").split("/")[0];
+        li.innerHTML = `
+            <a href="${escapeHtml(
+                r.url
+            )}" target="_blank" class="text-sm text-yellow-300 hover:text-yellow-400 underline">
+                ${escapeHtml(r.title)}
+            </a>
+            ${
+                urlDomain
+                    ? `<span class="text-xs text-yellow-300 ml-2">${escapeHtml(
+                          urlDomain
+                      )}</span>`
+                    : ""
+            }
+        `;
         ul.appendChild(li);
     });
     container.appendChild(ul);
@@ -423,18 +530,43 @@ function renderAiResponseFromText(text) {
     </div>
 `;
 
-    // Set the text content directly to preserve formatting
-    const textElement = responseElement.querySelector('.ai-response-text');
-    textElement.textContent = text;
+    // Set the HTML content to allow clickable links
+    const textElement = responseElement.querySelector(".ai-response-text");
+    textElement.innerHTML = text;
 
     transcriptionContainer.appendChild(responseElement);
     transcriptionContainer.scrollTop = transcriptionContainer.scrollHeight;
 }
 
+// Ensure links inside the transcription container open reliably.
+// Some browsers or UI layers can intercept clicks; use delegated handling
+// to explicitly open anchor hrefs in a new tab when clicked.
+// This also avoids relying on default behavior if some element is blocking pointer events.
+document.addEventListener("DOMContentLoaded", function () {
+    if (transcriptionContainer) {
+        transcriptionContainer.addEventListener("click", function (ev) {
+            try {
+                const anchor = ev.target.closest && ev.target.closest("a");
+                if (anchor && anchor.getAttribute("href")) {
+                    ev.stopPropagation();
+                    ev.preventDefault();
+                    const href = anchor.getAttribute("href");
+                    window.open(href, "_blank", "noopener,noreferrer");
+                }
+            } catch (e) {
+                console.error(
+                    "Error handling transcription container link click:",
+                    e
+                );
+            }
+        });
+    }
+});
+
 // Helper function to format text with proper line breaks and wrapping
 function formatTextForDisplay(text) {
     // Ensure line breaks are preserved and long words are broken
-    return text.replace(/\n/g, '\n').trim();
+    return text.replace(/\n/g, "\n").trim();
 }
 
 // Audio processing worklet
