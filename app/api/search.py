@@ -165,22 +165,14 @@ async def duckduckgo_summary(q: str = Query(..., min_length=1), n: int = Query(3
         url_pattern = r'`?(https?://[^\s`]+)`?'
         tts_text = re.sub(url_pattern, url_replacer, summary)
 
-        async def _run_tts_and_log(text: str):
-            try:
-                audio = await tts_service(text)
-                if audio:
-                    logger.info(f"Background TTS produced audio (length={len(audio)}) for search summary")
-                else:
-                    logger.info("Background TTS produced no audio for search summary")
-            except Exception as exc:
-                logger.error(f"Background TTS error: {exc}")
-
-        # Fire-and-forget: use TTS-friendly text for audio, but send real summary to frontend
+        # Generate TTS audio synchronously and include it in the response
         try:
-            asyncio.create_task(_run_tts_and_log(tts_text))
-        except Exception:
-            logger.warning("Unable to schedule background TTS task")
+            audio_b64 = await tts_service(tts_text)
+            logger.info(f"TTS generated audio for search summary (length={len(audio_b64) if audio_b64 else 0})")
+        except Exception as exc:
+            logger.error(f"TTS error: {exc}")
+            audio_b64 = ""
 
-        return {"summary": summary, "audio": ""}
+        return {"summary": summary, "audio": audio_b64}
     except Exception as e:
         return {"summary": f"Error summarizing results: {str(e)}"}

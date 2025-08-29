@@ -1,12 +1,14 @@
 """Main FastAPI application"""
 import os
-from fastapi import FastAPI, Request, WebSocket
+import assemblyai
+from fastapi import FastAPI, Form, Request, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 
-from app.core.config import settings
+from app.core.config import save_user_keys, settings
 from app.core.logging import setup_logging, get_logger
 from app.api import health
 from app.api import search
@@ -52,6 +54,31 @@ app.websocket("/ws")(websocket_endpoint)
 async def read_root(request: Request):
     logger.info("AI Voice Chat interface requested")
     return templates.TemplateResponse("index.html", {"request": request})
+
+@app.post("/update-keys")
+async def update_keys(request: Request):
+    form_data = await request.form()
+    assemblyai_api_key: Optional[str] = form_data.get("assemblyai_api_key")
+    google_api_key: Optional[str] = form_data.get("google_api_key")
+    murf_api_key: Optional[str] = form_data.get("murf_api_key")
+    ws_murf_api_url: Optional[str] = form_data.get("ws_murf_api_url")
+
+    global user_keys
+    if assemblyai_api_key:
+        settings.user_keys["assemblyai_api_key"] = assemblyai_api_key
+    if google_api_key:
+        settings.user_keys["google_api_key"] = google_api_key
+    if murf_api_key:
+        settings.user_keys["murf_api_key"] = murf_api_key
+    if ws_murf_api_url:
+        settings.user_keys["ws_murf_api_url"] = ws_murf_api_url
+    save_user_keys()
+    return {"message": "API keys saved successfully"}
+
+@app.get("/settings", response_class=HTMLResponse)
+async def read_settings(request: Request):
+    logger.info("AI Voice Chat settings requested")
+    return templates.TemplateResponse("settings.html", {"request": request, "user_keys": settings.user_keys})
 
 @app.on_event("startup")
 async def startup_event():

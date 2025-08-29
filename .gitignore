@@ -10,3 +10,4 @@ uploads
 run_legacy.py
 app.log
 websocket.html
+user_keys.json
