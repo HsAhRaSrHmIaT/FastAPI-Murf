@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Settings - API Key Configuration</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="static/styles.css" />
+    </head>
+    <body
+        class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white min-h-screen flex flex-col"
+    >
+        <div class="flex-1 flex items-center justify-center p-4">
+            <div
+                class="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl max-w-4xl w-full flex flex-col"
+            >
+                <!-- Header -->
+                <div
+                    class="p-4 border-b border-white/10 flex justify-between items-center flex-shrink-0"
+                >
+                    <div>
+                        <h1
+                            class="text-3xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2 select-none tracking-wide"
+                        >
+                            ⚙️ Settings
+                        </h1>
+                        <p class="text-slate-300 text-sm ml-2">
+                            Configure your API keys for the AI voice chat
+                        </p>
+                    </div>
+                    <button
+                        onclick="window.location.href='/'"
+                        class="bg-white/5 border border-white/10 w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-red-400/50 hover:border-red-400 shadow-lg"
+                    >
+                        <svg
+                            class="w-6 h-6"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15 19l-7-7 7-7"
+                            ></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Settings Form -->
+                <div class="flex-1 p-6 space-y-6 min-h-0 mt-2">
+                    <div
+                        id="health-status"
+                        class="text-gray-400 text-center mb-4 bg-white/5 border border-white/10 px-3 py-2 rounded-full shadow-lg w-40 mx-auto"
+                    ></div>
+                    <div>
+                        <div class="text-center text-gray-400 mb-6">
+                            <p>
+                                Enter your API keys below. These will override
+                                the default .env values for this session.
+                            </p>
+                            <p class="text-xs mt-2 text-gray-500">
+                                Keys are saved locally and persist across
+                                restarts.
+                            </p>
+                        </div>
+                        <form class="space-y-6" id="settingsForm">
+                            <div class="flex flex-col gap-4 pb-4">
+                                <div>
+                                    <label
+                                        for="assemblyai_api_key"
+                                        class="block text-sm font-semibold text-white mb-2"
+                                    >
+                                        AssemblyAI API Key
+                                    </label>
+                                    <div class="relative">
+                                        <input
+                                            type="password"
+                                            id="assemblyai_api_key"
+                                            name="assemblyai_api_key"
+                                            value="{{ user_keys.get('assemblyai_api_key', '') }}"
+                                            class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl shadow-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all duration-200 pr-12"
+                                            placeholder="Enter AssemblyAI API Key"
+                                        />
+                                        <button
+                                            type="button"
+                                            id="toggle-assemblyai"
+                                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-200"
+                                            onclick="toggleVisibility('assemblyai_api_key')"
+                                        >
+                                            <span id="eye-open-assemblyai">
+                                                <svg
+                                                    class="w-5 h-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                    ></path>
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                    ></path>
+                                                </svg>
+                                            </span>
+                                            <span
+                                                id="eye-closed-assemblyai"
+                                                class="hidden"
+                                            >
+                                                <svg
+                                                    class="w-5 h-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                    ></path>
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                    ></path>
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M3 3l18 18"
+                                                    ></path>
+                                                </svg>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label
+                                        for="google_api_key"
+                                        class="block text-sm font-semibold text-white mb-2"
+                                    >
+                                        Google API Key
+                                    </label>
+                                    <div class="relative">
+                                        <input
+                                            type="password"
+                                            id="google_api_key"
+                                            name="google_api_key"
+                                            value="{{ user_keys.get('google_api_key', '') }}"
+                                            class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl shadow-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all duration-200 pr-12"
+                                            placeholder="Enter Google API Key"
+                                        />
+                                        <button
+                                            type="button"
+                                            id="toggle-google"
+                                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-200"
+                                            onclick="toggleVisibility('google_api_key')"
+                                        >
+                                            <span id="eye-open-google">
+                                                <svg
+                                                    class="w-5 h-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                    ></path>
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                    ></path>
+                                                </svg>
+                                            </span>
+                                            <span
+                                                id="eye-closed-google"
+                                                class="hidden"
+                                            >
+                                                <svg
+                                                    class="w-5 h-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                    ></path>
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                    ></path>
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M3 3l18 18"
+                                                    ></path>
+                                                </svg>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label
+                                        for="murf_api_key"
+                                        class="block text-sm font-semibold text-white mb-2"
+                                    >
+                                        Murf API Key
+                                    </label>
+                                    <div class="relative">
+                                        <input
+                                            type="password"
+                                            id="murf_api_key"
+                                            name="murf_api_key"
+                                            value="{{ user_keys.get('murf_api_key', '') }}"
+                                            class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl shadow-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all duration-200 pr-12"
+                                            placeholder="Enter Murf API Key"
+                                        />
+                                        <button
+                                            type="button"
+                                            id="toggle-murf"
+                                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-200"
+                                            onclick="toggleVisibility('murf_api_key')"
+                                        >
+                                            <span id="eye-open-murf">
+                                                <svg
+                                                    class="w-5 h-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                    ></path>
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                    ></path>
+                                                </svg>
+                                            </span>
+                                            <span
+                                                id="eye-closed-murf"
+                                                class="hidden"
+                                            >
+                                                <svg
+                                                    class="w-5 h-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                    ></path>
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                    ></path>
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M3 3l18 18"
+                                                    ></path>
+                                                </svg>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <button
+                                    type="submit"
+                                    id="saveButton"
+                                    class="bg-white/5 border border-white/10 px-8 py-3 rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:bg-green-400/50 hover:border-green-400 shadow-lg mx-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:border-white/10"
+                                >
+                                    <svg
+                                        class="w-5 h-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M5 13l4 4L19 7"
+                                        ></path>
+                                    </svg>
+                                    Save Keys
+                                </button>
+                            </div>
+                        </form>
+                        <div id="message"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="text-center py-4 flex-shrink-0">
+            <p class="text-gray-400 text-sm">
+                Powered by
+                <span class="text-purple-400 font-semibold">FastAPI</span>,
+                <span class="text-pink-400 font-semibold">MurfAI</span>,
+                <span class="text-green-400 font-semibold">AssemblyAI</span>
+                &
+                <span class="text-blue-400 font-semibold">Google Gemini</span>
+            </p>
+        </footer>
+        <script src="/static/settings.js"></script>
+    </body>
+</html>

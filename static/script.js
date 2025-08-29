@@ -1,174 +1,789 @@
-// == GLOBALS ==
-let mediaRecorder, record, stop, reset;
-let chunks = [];
-let sessionId;
-let userAudioBlobs = [];
+let websocket = null;
+let audioContext = null;
+let audioWorkletNode = null;
+let audioStream = null;
 let isRecording = false;
-let conversationCount = 0;
+let turnCount = 0;
 
-const $ = (sel) => document.getElementById(sel);
+// Audio playback variables
+let playbackAudioContext = null;
+let currentTtsSource = null;
+// Flag to control whether incoming TTS should be played (stopRecording sets to false)
+let allowTtsPlayback = true;
+// Track all active TTS sources so we can stop them reliably
+let activeTtsSources = [];
 
-function showStatus(type, message, duration = 3000) {
-    addSystemMessage(message, type);
-}
+let toggleChatBtn,
+    toggleChatText,
+    clearBtn,
+    connectionStatus,
+    listeningStatus,
+    realTimeStatus,
+    interimText,
+    transcriptionContainer;
 
-// Health status display
-function updateHealthStatus(healthData) {
-    const sessionInfo = $("sessionInfo");
-    if (!sessionInfo) return;
-
-    let statusIcon = "🟢";
-    let statusText = "Healthy";
-    let statusClass = "text-green-300";
-
-    if (healthData.status === "degraded") {
-        statusIcon = "🟡";
-        statusText = "Degraded";
-        statusClass = "text-yellow-300";
-    } else if (healthData.status === "down") {
-        statusIcon = "🔴";
-        statusText = "Down";
-        statusClass = "text-red-300";
-    }
-
-    let healthInfo = `${statusIcon} Server: ${statusText}`;
-    if (healthData.missing_api_keys && healthData.missing_api_keys.length > 0) {
-        healthInfo += ` (Missing: ${healthData.missing_api_keys.join(", ")})`;
-    }
-
-    const sessionElement = $("sessionId");
-    if (sessionElement) {
-        sessionElement.innerHTML = `
-      <div class="italic">ID: ${sessionId}</div>
-      <div class="${statusClass} text-xs mt-1 text-center select-none">${healthInfo}</div>
-    `;
-    }
-}
-
-function getSessionId() {
-    const urlParams = new URLSearchParams(window.location.search);
-    let s = urlParams.get("session");
-    if (!s) {
-        s =
-            "session_" +
-            Date.now() +
-            "_" +
-            Math.random().toString(36).substring(2, 11);
-        urlParams.set("session", s);
-        window.history.replaceState(
-            {},
-            "",
-            `${window.location.pathname}?${urlParams}`
-        );
-    }
-    return s;
-}
-sessionId = getSessionId();
-
-function initializeSessionDisplay() {
-    const sessionElement = $("sessionId");
-    const sessionInfoElement = $("sessionInfo");
-
-    if (sessionElement) {
-        sessionElement.textContent = `Session: ${sessionId}`;
-    }
-
-    if (sessionInfoElement) {
-        sessionInfoElement.classList.remove("hidden");
-    }
-}
-
-function enableRecordingUI(recording) {
-    if (!record || !stop || !reset) return;
-
-    record.disabled = recording;
-    stop.disabled = !recording;
-    reset.disabled = recording;
-
-    record.classList.toggle("opacity-50", recording);
-    stop.classList.toggle("opacity-50", !recording);
-    record.classList.toggle("cursor-not-allowed", recording);
-    stop.classList.toggle("cursor-not-allowed", !recording);
-
-    if (recording) {
-        record.classList.add("animate-pulse");
-    } else {
-        record.classList.remove("animate-pulse");
-    }
-}
-
-// Conversation Panel
-function addMessageToConversation(content, isUser = true, timestamp = null) {
-    const messagesContainer = $("messagesContainer");
-    if (!messagesContainer) return;
-
-    if (conversationCount === 0) {
-        messagesContainer.innerHTML = "";
-    }
-
-    conversationCount++;
-    const messageTime =
-        timestamp ||
-        new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
+// Initialize audio context for playback
+async function initializePlaybackAudio() {
+    if (!playbackAudioContext) {
+        playbackAudioContext = new (window.AudioContext ||
+            window.webkitAudioContext)({
+            sampleRate: 44100,
         });
-
-    const messageElement = document.createElement("div");
-    messageElement.className = "message-item mb-4 animate-fadeIn";
-
-    if (isUser) {
-        messageElement.innerHTML = `
-      <div class="flex items-start gap-3 justify-end">
-        <div class="bg-gradient-to-r from-blue-600/80 to-blue-500/80 rounded-2xl rounded-tr-none p-4 max-w-xs lg:max-w-md border border-blue-500/30 shadow-lg">
-          <p class="text-white text-sm leading-relaxed">${escapeHtml(
-              content
-          )}</p>
-          <div class="flex items-center justify-between mt-2 pt-2 border-t border-blue-400/20">
-            <span class="text-xs text-blue-200/70">#${conversationCount}</span>
-            <span class="text-xs text-blue-200/70">${messageTime}</span>
-          </div>
-        </div>
-        <div class="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-          </svg>
-        </div>
-      </div>
-    `;
-    } else {
-        messageElement.innerHTML = `
-      <div class="flex items-start gap-3">
-        <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-          </svg>
-        </div>
-        <div class="bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-2xl rounded-tl-none p-4 max-w-xs lg:max-w-md border border-purple-500/30 shadow-lg">
-          <p class="text-white text-sm leading-relaxed">${escapeHtml(
-              content
-          )}</p>
-          <div class="flex items-center justify-between mt-2 pt-2 border-t border-purple-400/20">
-            <span class="text-xs text-purple-200/70">#${conversationCount}</span>
-            <span class="text-xs text-purple-200/70">${messageTime}</span>
-          </div>
-        </div>
-      </div>
-    `;
     }
 
-    messagesContainer.appendChild(messageElement);
+    // Resume context if suspended (required by browser policies)
+    if (playbackAudioContext.state === "suspended") {
+        await playbackAudioContext.resume();
+    }
+}
+
+// Play base64 audio data
+async function playAudioFromBase64(base64Audio) {
+    try {
+        await initializePlaybackAudio();
+
+        // If playback has been disabled (user pressed stop), ignore incoming TTS
+        if (!allowTtsPlayback) {
+            console.log("TTS playback suppressed - allowTtsPlayback=false");
+            return;
+        }
+
+        const binaryString = atob(base64Audio);
+        const arrayBuffer = new ArrayBuffer(binaryString.length);
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        for (let i = 0; i < binaryString.length; i++) {
+            uint8Array[i] = binaryString.charCodeAt(i);
+        }
+
+        const audioBuffer = await playbackAudioContext.decodeAudioData(
+            arrayBuffer
+        );
+
+        if (currentTtsSource) {
+            try {
+                currentTtsSource.stop();
+            } catch (error) {
+                currentTtsSource.disconnect();
+                currentTtsSource = null;
+                console.error("Error stopping current TTS source:", error);
+            }
+        }
+
+        const source = playbackAudioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(playbackAudioContext.destination);
+        currentTtsSource = source;
+
+        // Track this source so stopRecording can stop it even if references change
+        activeTtsSources.push(source);
+
+        console.log("Playing TTS audio...");
+        source.start(0);
+
+        // Add visual feedback
+        realTimeStatus.textContent = "🔊 Playing AI response...";
+
+        // Reset status when audio ends
+        source.onended = () => {
+            // Remove from active list and clear currentTtsSource if it matches
+            const idx = activeTtsSources.indexOf(source);
+            if (idx !== -1) activeTtsSources.splice(idx, 1);
+            if (currentTtsSource === source) currentTtsSource = null;
+            realTimeStatus.textContent = "🎤 Ready for your next message...";
+        };
+    } catch (error) {
+        console.error("Error playing audio:", error);
+        addSystemMessage("Failed to play audio: " + error.message, "error");
+        realTimeStatus.textContent = "🎤 Ready for your next message...";
+    }
+}
+
+// Connect to WebSocket
+function connectWebSocket() {
+    const wsUrl = `ws://${window.location.host}/ws`;
+    console.log("Attempting to connect to WebSocket:", wsUrl);
+
+    websocket = new WebSocket(wsUrl);
+
+    websocket.onopen = () => {
+        console.log("WebSocket connected");
+        connectionStatus.innerHTML =
+            '<span class="text-green-300">● Connected</span>';
+        addSystemMessage("Connected to AI Calm Guide server", "success");
+
+        // Test interim text element
+        interimText.textContent = "Connection test - interim text working";
+        setTimeout(() => {
+            interimText.textContent = "";
+        }, 2000);
+    };
+
+    websocket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleWebSocketMessage(data);
+    };
+
+    websocket.onclose = () => {
+        console.log("WebSocket disconnected");
+        connectionStatus.innerHTML =
+            '<span class="text-red-300">● Disconnected</span>';
+        addSystemMessage("Disconnected from server", "error");
+    };
+
+    websocket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        connectionStatus.innerHTML =
+            '<span class="text-red-300">● Error</span>';
+        addSystemMessage("Connection error", "error");
+    };
+}
+
+function handleWebSocketMessage(data) {
+    switch (data.type) {
+        case "search_prompt":
+            showSearchPrompt(data.query, data.message);
+            break;
+        case "connection":
+            addSystemMessage(data.message, "info");
+            break;
+        case "status":
+            addSystemMessage(data.message, "info");
+            if (data.message.includes("started")) {
+                realTimeStatus.textContent =
+                    "🎤 Listening... Speak to start AI conversation";
+                listeningStatus.classList.remove("hidden");
+            }
+            break;
+        case "interim_transcript":
+            // console.log("Received interim transcript:", data.text);
+            interimText.textContent = `Speaking: "${data.text}"`;
+            realTimeStatus.textContent = "Processing speech...";
+            break;
+        case "turn_end":
+            addTurnTranscript(data.text);
+            interimText.textContent = "";
+            realTimeStatus.textContent = "🤖 Processing with AI...";
+            break;
+        case "turn_update":
+            updateLastTurnTranscript(data.text);
+            break;
+        case "llm_thinking":
+            realTimeStatus.textContent = "🤖 AI is thinking...";
+            addSystemMessage("AI is processing your message...", "info");
+            break;
+        case "llm_response_start":
+            realTimeStatus.textContent = "🤖 AI is responding...";
+            startAIResponse();
+            break;
+        case "llm_response_chunk":
+            // console.log("LLM chunk received:", data.chunk);
+            appendAIResponseChunk(data.chunk);
+            break;
+        case "llm_response_complete":
+            // console.log("WebSocket message received:", data.final_response);
+            completeAIResponse(data.final_response);
+            realTimeStatus.textContent = "🎤 Ready for your next message...";
+            break;
+        case "tts_response":
+            // Handle TTS audio response
+            console.log(
+                `Received TTS audio (base64 length: ${data.audio.length})`
+            );
+            if (data.audio) {
+                playAudioFromBase64(data.audio);
+            }
+            break;
+        case "llm_error":
+            addSystemMessage(data.message, "error");
+            realTimeStatus.textContent = "🎤 Ready for your next message...";
+            break;
+        case "error":
+            addSystemMessage(data.message, "error");
+            break;
+    }
+}
+
+let currentAIResponseElement = null;
+let currentAIResponseText = "";
+
+function startAIResponse() {
+    // Create a new AI response element
+    const responseElement = document.createElement("div");
+    responseElement.className = "mb-4 animate-fadeIn";
+    responseElement.innerHTML = `
+    <div class="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl p-4 border border-purple-500/30">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">🤖</span>
+            </div>
+            <div class="flex-1">
+                <p class="ai-response-text text-white text-sm leading-relaxed"></p>
+                <div class="flex items-center justify-between mt-2 pt-2 border-t border-purple-400/20">
+                    <span class="text-xs text-purple-200/70">🤖 AI Response</span>
+                    <span class="text-xs text-purple-200/70">${new Date().toLocaleTimeString()}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
+    transcriptionContainer.appendChild(responseElement);
+    currentAIResponseElement =
+        responseElement.querySelector(".ai-response-text");
+    currentAIResponseText = "";
 
     // Scroll to bottom
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    transcriptionContainer.scrollTop = transcriptionContainer.scrollHeight;
 }
 
-function addSystemMessage(content, type = "info") {
-    const messagesContainer = $("messagesContainer");
-    if (!messagesContainer) return;
+function appendAIResponseChunk(chunk) {
+    if (currentAIResponseElement) {
+        currentAIResponseText += chunk;
+        currentAIResponseElement.textContent = currentAIResponseText;
 
+        // Auto-scroll to keep the response visible
+        transcriptionContainer.scrollTop = transcriptionContainer.scrollHeight;
+    }
+}
+
+function completeAIResponse(finalResponse) {
+    if (currentAIResponseElement) {
+        // Format the response to convert backtick-wrapped URLs to clickable links
+        currentAIResponseElement.innerHTML = formatSummaryText(finalResponse);
+
+        // Add a subtle animation to indicate completion
+        currentAIResponseElement.parentElement.style.animation =
+            "pulse 0.5s ease-in-out";
+
+        // Clear current response tracking
+        currentAIResponseElement = null;
+        currentAIResponseText = "";
+
+        // Scroll to bottom
+        transcriptionContainer.scrollTop = transcriptionContainer.scrollHeight;
+    }
+}
+
+function updateLastTurnTranscript(newText) {
+    // Find the last turn card and update its text
+    const lastCard = transcriptionContainer.lastElementChild;
+    if (lastCard && lastCard.querySelector(".transcript-text")) {
+        lastCard.querySelector(".transcript-text").textContent = newText;
+        console.log(`Updated last turn with: ${newText}`);
+    }
+}
+
+// Show a yellow search confirmation prompt with Open Search and Cancel buttons
+function showSearchPrompt(query, message) {
+    // Create container
+    const prompt = document.createElement("div");
+    prompt.className = "mb-4 animate-fadeIn";
+    prompt.innerHTML = `
+    <div class="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-2xl p-4 border border-yellow-500/30">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">🔎</span>
+            </div>
+            <div class="flex-1">
+                <p class="text-white text-sm leading-relaxed">${escapeHtml(
+                    message
+                )}</p>
+                <div class="mt-3 flex gap-2">
+                    <button class="open-search-btn bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:from-yellow-400 hover:to-orange-400 transition-all duration-200 border border-yellow-400/30">Open search</button>
+                    <button class="summarize-search-btn bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:from-orange-400 hover:to-red-400 transition-all duration-200 border border-orange-400/30">Summarize top 3</button>
+                    <button class="cancel-search-btn bg-white/5 text-white px-3 py-1 rounded-md text-xs font-medium border border-white/20 hover:bg-white/10 transition-all duration-200">Cancel</button>
+                </div>
+                <div class="search-results mt-3"></div>
+                <div class="flex items-center justify-between mt-2 pt-2 border-t border-yellow-400/20">
+                    <span class="text-xs text-yellow-200/70">🔎 Search Request</span>
+                    <span class="text-xs text-yellow-200/70">${new Date().toLocaleTimeString()}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
+    transcriptionContainer.appendChild(prompt);
+    transcriptionContainer.scrollTop = transcriptionContainer.scrollHeight;
+
+    const openBtn = prompt.querySelector(".open-search-btn");
+    const cancelBtn = prompt.querySelector(".cancel-search-btn");
+    const resultsDiv = prompt.querySelector(".search-results");
+
+    // Fetch and display results immediately
+    (async () => {
+        resultsDiv.textContent = "Loading search results...";
+        try {
+            const res = await fetch(
+                `/api/search/duckduckgo?q=${encodeURIComponent(query)}`
+            );
+            if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+            const results = await res.json();
+            resultsDiv.textContent = "";
+            renderSearchResults(resultsDiv, results);
+        } catch (err) {
+            resultsDiv.textContent =
+                "Failed to fetch search results: " + err.message;
+        }
+    })();
+
+    openBtn.addEventListener("click", () => {
+        // Only open DuckDuckGo in a new tab, don't fetch again
+        const ddUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+        window.open(ddUrl, "_blank");
+    });
+
+    const summarizeBtn = prompt.querySelector(".summarize-search-btn");
+    summarizeBtn.addEventListener("click", async () => {
+        if (summarizeBtn.disabled) return; // Prevent multiple clicks
+        summarizeBtn.disabled = true;
+        summarizeBtn.innerHTML =
+            '<span class="animate-spin">⏳</span> Summarizing...';
+
+        try {
+            const res = await fetch(
+                `/api/search/duckduckgo_summary?q=${encodeURIComponent(
+                    query
+                )}&n=3`
+            );
+            if (!res.ok)
+                throw new Error(
+                    `Summary failed: ${res.status} ${res.statusText}`
+                );
+            const json = await res.json();
+            // Render the returned summary in the AI response format
+            const formattedSummary = formatSummaryText(json.summary);
+            renderAiResponseFromText(formattedSummary);
+
+            // Remove the prompt and reset UI immediately after showing summary
+            prompt.remove();
+            summarizeBtn.innerHTML = "Summarize top 3";
+            summarizeBtn.disabled = false;
+
+            // If audio returned, play it (in background, don't block UI)
+            if (json.audio) {
+                playAudioFromBase64(json.audio).catch((e) => {
+                    console.error("Failed to play summary audio:", e);
+                    addSystemMessage(
+                        "Failed to play summary audio: " + e.message,
+                        "error"
+                    );
+                });
+            } else {
+                addSystemMessage(
+                    "No audio available for summary (e.g., API credits exhausted).",
+                    "info"
+                );
+            }
+        } catch (err) {
+            console.error("Error getting summary:", err);
+            resultsDiv.innerHTML = `<p class="text-red-300 text-sm">❌ Failed to get summary: ${err.message}. Please try again.</p>`;
+            summarizeBtn.innerHTML = "Summarize top 3";
+            summarizeBtn.disabled = false;
+        }
+    });
+
+    cancelBtn.addEventListener("click", () => {
+        prompt.remove();
+    });
+}
+
+function formatSummaryText(summary) {
+    if (!summary || typeof summary !== "string") return "No summary available.";
+
+    // DuckDuckGo redirect URLs: extract only the real URL from uddg param
+    const ddgoRegex =
+        /https?:\/\/duckduckgo\\.com\/l\/\?uddg=([^&\s]+)(?:&rut=[^\s`]+)?/g;
+    summary = summary.replace(ddgoRegex, (match, encodedUrl) => {
+        try {
+            const actualUrl = decodeURIComponent(encodedUrl);
+            return `<a href="${actualUrl}" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">${actualUrl}</a>`;
+        } catch (e) {
+            return match;
+        }
+    });
+
+    // (URL: `...`) format
+    const urlInParens = /\(URL: `([^`]+)`\)/g;
+    summary = summary.replace(
+        urlInParens,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // Lines like: URL: `...`
+    const urlLine = /^\s*URL: `([^`]+)`/gm;
+    summary = summary.replace(
+        urlLine,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // Bare backtick-wrapped URLs
+    const bareBacktickUrl = /`(https?:\/\/[^`\s]+)`/g;
+    summary = summary.replace(
+        bareBacktickUrl,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // URLs in parentheses (e.g., (https://...))
+    const urlInPlainParens = /\((https?:\/\/[^\s)]+)\)/g;
+    summary = summary.replace(
+        urlInPlainParens,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // Plain URLs at end of line (e.g., 'URL: https://...')
+    const urlPlain = /URL:\s*(https?:\/\/[^\s)\]\}"<>]+)(?=\s|$)/g;
+    summary = summary.replace(
+        urlPlain,
+        'URL: <a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // Plain URLs anywhere in the text (not part of other patterns)
+    const plainUrl = /\b(https?:\/\/[^\s<>"']+)(?![^<]*>)/g;
+    summary = summary.replace(
+        plainUrl,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-purple-300 hover:text-purple-200 underline">$1</a>'
+    );
+
+    // Split lines and clean up formatting
+    let lines = summary
+        .split("\n")
+        .map((line) =>
+            line
+                .replace(/^([•*]+|\s*[*]+)\s*/, "") // Remove all leading asterisks, bullets, and spaces
+                .replace(/`+$/, "") // Remove trailing backticks
+                .replace(/\*\*/g, "") // Remove double asterisks
+                .trim()
+        )
+        .filter((line) => line.length > 0);
+
+    if (lines.length > 1) {
+        // Add bullets only to lines after the first
+        return [lines[0], ...lines.slice(1).map((line) => `• ${line}`)].join(
+            "\n"
+        );
+    }
+
+    return summary;
+}
+
+// Render clickable search results into a container
+function renderSearchResults(container, results) {
+    if (!results || results.length === 0) {
+        container.textContent = "No results found.";
+        return;
+    }
+
+    const ul = document.createElement("ul");
+    ul.className = "space-y-2";
+    results.forEach((r) => {
+        const li = document.createElement("li");
+        const urlDomain = r.url.replace(/^https?:\/\//, "").split("/")[0];
+        li.innerHTML = `
+            <a href="${escapeHtml(
+                r.url
+            )}" target="_blank" class="text-sm text-yellow-300 hover:text-yellow-400 underline">
+                ${escapeHtml(r.title)}
+            </a>
+            ${
+                urlDomain
+                    ? `<span class="text-xs text-yellow-300 ml-2">${escapeHtml(
+                          urlDomain
+                      )}</span>`
+                    : ""
+            }
+        `;
+        ul.appendChild(li);
+    });
+    container.appendChild(ul);
+}
+
+// small helper to escape HTML
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Render summary text as an AI response card (to match existing UI cards)
+function renderAiResponseFromText(text) {
+    const responseElement = document.createElement("div");
+    responseElement.className = "mb-4 animate-fadeIn";
+    responseElement.innerHTML = `
+    <div class="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl p-4 border border-purple-500/30">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">🤖</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="ai-response-text text-white text-sm leading-relaxed break-words whitespace-pre-wrap"></p>
+                <div class="flex items-center justify-between mt-2 pt-2 border-t border-purple-400/20">
+                    <span class="text-xs text-purple-200/70">🤖 Search Summary</span>
+                    <span class="text-xs text-purple-200/70">${new Date().toLocaleTimeString()}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
+    // Set the HTML content to allow clickable links
+    const textElement = responseElement.querySelector(".ai-response-text");
+    textElement.innerHTML = text;
+
+    transcriptionContainer.appendChild(responseElement);
+    transcriptionContainer.scrollTop = transcriptionContainer.scrollHeight;
+}
+
+// Ensure links inside the transcription container open reliably.
+// Some browsers or UI layers can intercept clicks; use delegated handling
+// to explicitly open anchor hrefs in a new tab when clicked.
+// This also avoids relying on default behavior if some element is blocking pointer events.
+document.addEventListener("DOMContentLoaded", function () {
+    if (transcriptionContainer) {
+        transcriptionContainer.addEventListener("click", function (ev) {
+            try {
+                const anchor = ev.target.closest && ev.target.closest("a");
+                if (anchor && anchor.getAttribute("href")) {
+                    ev.stopPropagation();
+                    ev.preventDefault();
+                    const href = anchor.getAttribute("href");
+                    window.open(href, "_blank", "noopener,noreferrer");
+                }
+            } catch (e) {
+                console.error(
+                    "Error handling transcription container link click:",
+                    e
+                );
+            }
+        });
+    }
+});
+
+// Helper function to format text with proper line breaks and wrapping
+function formatTextForDisplay(text) {
+    // Ensure line breaks are preserved and long words are broken
+    return text.replace(/\n/g, "\n").trim();
+}
+
+// Audio processing worklet
+const audioWorkletCode = `
+class AudioProcessor extends AudioWorkletProcessor {
+    constructor() {
+        super();
+        this.bufferSize = 1600; // 100ms at 16kHz
+        this.buffer = new Float32Array(this.bufferSize);
+        this.bufferIndex = 0;
+    }
+
+    process(inputs, outputs, parameters) {
+        const input = inputs[0];
+        if (input.length > 0) {
+            const inputChannel = input[0];
+            
+            for (let i = 0; i < inputChannel.length; i++) {
+                this.buffer[this.bufferIndex] = inputChannel[i];
+                this.bufferIndex++;
+                
+                if (this.bufferIndex >= this.bufferSize) {
+                    // Convert to 16-bit PCM
+                    const pcmData = new Int16Array(this.bufferSize);
+                    for (let j = 0; j < this.bufferSize; j++) {
+                        const sample = Math.max(-1, Math.min(1, this.buffer[j]));
+                        pcmData[j] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                    }
+                    
+                    // Send PCM data
+                    this.port.postMessage(pcmData.buffer);
+                    
+                    // Reset buffer
+                    this.bufferIndex = 0;
+                }
+            }
+        }
+        return true;
+    }
+}
+
+registerProcessor('audio-processor', AudioProcessor);
+`;
+
+async function startRecording() {
+    try {
+        // Allow TTS playback when a new session starts
+        allowTtsPlayback = true;
+        activeTtsSources = activeTtsSources || [];
+
+        // Initialize playback audio context early (user interaction required)
+        await initializePlaybackAudio();
+
+        // Get audio stream
+        audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                sampleRate: 16000,
+                channelCount: 1,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+            },
+        });
+
+        // Create audio context
+        audioContext = new AudioContext({ sampleRate: 16000 });
+
+        // Create worklet
+        const workletBlob = new Blob([audioWorkletCode], {
+            type: "application/javascript",
+        });
+        const workletUrl = URL.createObjectURL(workletBlob);
+
+        await audioContext.audioWorklet.addModule(workletUrl);
+        audioWorkletNode = new AudioWorkletNode(
+            audioContext,
+            "audio-processor"
+        );
+
+        // Create source and connect
+        const source = audioContext.createMediaStreamSource(audioStream);
+        source.connect(audioWorkletNode);
+
+        // Handle audio data
+        audioWorkletNode.port.onmessage = (event) => {
+            if (
+                websocket &&
+                websocket.readyState === WebSocket.OPEN &&
+                isRecording
+            ) {
+                websocket.send(event.data);
+            }
+        };
+
+        // Send start command
+        websocket.send(JSON.stringify({ command: "start_recording" }));
+
+        isRecording = true;
+        realTimeStatus.textContent = "🎤 Starting AI voice chat...";
+    } catch (error) {
+        console.error("Error starting recording:", error);
+        addSystemMessage(
+            "Failed to start recording: " + error.message,
+            "error"
+        );
+    }
+}
+
+function stopRecording() {
+    if (isRecording) {
+        // Send stop command
+        websocket.send(JSON.stringify({ command: "stop_recording" }));
+
+        // Disable further TTS playback from incoming messages
+        allowTtsPlayback = false;
+
+        // Stop and disconnect any active TTS sources
+        if (activeTtsSources && activeTtsSources.length > 0) {
+            activeTtsSources.forEach((s) => {
+                try {
+                    s.stop();
+                } catch (e) {
+                    // ignore
+                }
+                try {
+                    s.disconnect();
+                } catch (e) {
+                    // ignore
+                }
+            });
+            activeTtsSources = [];
+        }
+
+        // Also clear the single currentTtsSource reference
+        if (currentTtsSource) {
+            try {
+                currentTtsSource.stop();
+            } catch (error) {
+                /* Ignore */
+            }
+            try {
+                currentTtsSource.disconnect();
+            } catch (error) {
+                /* Ignore */
+            }
+            currentTtsSource = null;
+        }
+
+        // Clean up audio resources
+        if (audioWorkletNode) {
+            audioWorkletNode.disconnect();
+            audioWorkletNode = null;
+        }
+
+        if (audioContext) {
+            audioContext.close();
+            audioContext = null;
+        }
+
+        if (audioStream) {
+            audioStream.getTracks().forEach((track) => track.stop());
+            audioStream = null;
+        }
+
+        isRecording = false;
+        realTimeStatus.textContent = "AI voice chat stopped";
+        interimText.textContent = "";
+        listeningStatus.classList.add("hidden");
+    }
+}
+
+function clearTranscripts() {
+    transcriptionContainer.innerHTML =
+        '<div class="text-center text-gray-400 mt-8"><p>Conversation cleared - start AI chat again</p></div>';
+    turnCount = 0;
+    realTimeStatus.textContent = "Ready for AI voice conversation";
+    interimText.textContent = "";
+}
+
+function addTurnTranscript(text) {
+    if (turnCount === 0) {
+        transcriptionContainer.innerHTML = "";
+    }
+
+    turnCount++;
+
+    // Create turn transcript
+    const transcriptElement = document.createElement("div");
+    transcriptElement.className = "mb-4 animate-fadeIn";
+    transcriptElement.innerHTML = `
+    <div class="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-2xl p-4 border border-green-500/30">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-sm font-bold">${turnCount}</span>
+            </div>
+            <div class="flex-1">
+                <p class="transcript-text text-white text-sm leading-relaxed">${escapeHtml(
+                    text
+                )}</p>
+                <div class="flex items-center justify-between mt-2 pt-2 border-t border-green-400/20">
+                    <span class="text-xs text-green-200/70">👨🏻User</span>
+                    <span class="text-xs text-green-200/70">${new Date().toLocaleTimeString()}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
+    transcriptionContainer.appendChild(transcriptElement);
+
+    // Scroll to bottom
+    transcriptionContainer.scrollTop = transcriptionContainer.scrollHeight;
+}
+
+function addSystemMessage(message, type = "info") {
     const messageElement = document.createElement("div");
-    messageElement.className = "system-message text-center my-4 animate-fadeIn";
+    messageElement.className = "text-center my-4 animate-fadeIn";
 
     let bgClass, textClass, icon;
     switch (type) {
@@ -182,12 +797,6 @@ function addSystemMessage(content, type = "info") {
             textClass = "text-green-300";
             icon = "✅";
             break;
-        case "warning":
-        case "warn":
-            bgClass = "bg-yellow-500/10 border-yellow-400/20";
-            textClass = "text-yellow-300";
-            icon = "⚠️";
-            break;
         default:
             bgClass = "bg-blue-500/10 border-blue-400/20";
             textClass = "text-blue-300";
@@ -196,32 +805,13 @@ function addSystemMessage(content, type = "info") {
 
     messageElement.innerHTML = `
     <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full ${bgClass} border backdrop-blur-sm ${textClass}">
-      <span>${icon}</span>
-      <span class="text-xs font-medium">${escapeHtml(content)}</span>
+        <span>${icon}</span>
+        <span class="text-xs font-medium">${escapeHtml(message)}</span>
     </div>
-  `;
+`;
 
-    messagesContainer.appendChild(messageElement);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
-
-function clearConversation() {
-    const messagesContainer = $("messagesContainer");
-    if (!messagesContainer) return;
-
-    messagesContainer.innerHTML = `
-    <div class="flex items-start gap-3">
-      <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-        </svg>
-      </div>
-      <div class="bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-2xl rounded-tl-none p-4 max-w-xs border border-purple-500/30">
-        <p class="text-white text-sm">👋 Hi! I'm your AI voice assistant. Click Record to start our conversation!</p>
-      </div>
-    </div>
-  `;
-    conversationCount = 0;
+    transcriptionContainer.appendChild(messageElement);
+    transcriptionContainer.scrollTop = transcriptionContainer.scrollHeight;
 }
 
 function escapeHtml(text) {
@@ -230,356 +820,64 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Typing indicator
-function showTypingIndicator() {
-    const typingIndicator = $("typingIndicator");
-    if (typingIndicator) {
-        typingIndicator.classList.remove("hidden");
-        const messagesContainer = $("messagesContainer");
-        if (messagesContainer) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-    }
-}
+// Initialize on page load
+document.addEventListener("DOMContentLoaded", function () {
+    toggleChatBtn = document.getElementById("toggleChatBtn");
+    clearBtn = document.getElementById("clearBtn");
+    connectionStatus = document.getElementById("connectionStatus");
+    listeningStatus = document.getElementById("listeningStatus");
+    realTimeStatus = document.getElementById("realTimeStatus");
+    interimText = document.getElementById("interimText");
+    transcriptionContainer = document.getElementById("transcriptionContainer");
 
-function hideTypingIndicator() {
-    const typingIndicator = $("typingIndicator");
-    if (typingIndicator) {
-        typingIndicator.classList.add("hidden");
-    }
-}
-
-// Health check
-async function checkServerHealth() {
-    try {
-        const response = await fetch("/health");
-        if (response.ok) {
-            const healthData = await response.json();
-            updateHealthStatus(healthData);
-
-            if (healthData.status === "degraded") {
-                addSystemMessage(
-                    `Server degraded: Missing ${healthData.missing_api_keys.join(
-                        ", "
-                    )}`,
-                    "warning"
+    if (toggleChatBtn) {
+        toggleChatText = document.getElementById("toggleChatText");
+        toggleChatBtn.addEventListener("click", async () => {
+            if (!isRecording) {
+                await startRecording();
+                toggleChatText.innerHTML = `
+                                    <div
+                                        class="w-4 h-4 bg-white rounded-full animate-pulse"
+                                    ></div>
+                `;
+                toggleChatBtn.classList.add("bg-red-400/50", "border-red-400");
+                toggleChatBtn.classList.remove(
+                    "hover:bg-green-400/50",
+                    "hover:border-green-400"
                 );
-            }
-        } else {
-            updateHealthStatus({ status: "down" });
-            addSystemMessage("Server connection failed", "error");
-        }
-    } catch (error) {
-        updateHealthStatus({ status: "down" });
-        // console.error("Health check failed:", error);
-    }
-}
-
-// Recording Logic
-async function initializeRecording() {
-    try {
-        // console.log("Requesting microphone access...");
-        addSystemMessage("Requesting microphone access...", "info");
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-            },
-        });
-
-        // console.log("Microphone access granted");
-        addSystemMessage(
-            "Microphone access granted! Ready to record.",
-            "success"
-        );
-
-        mediaRecorder = new MediaRecorder(stream, {
-            mimeType: "audio/webm;codecs=opus",
-        });
-
-        record = $("record");
-        stop = $("stop");
-        reset = $("reset");
-
-        enableRecordingUI(false);
-
-        record.onclick = () => {
-            if (isRecording) return;
-
-            chunks = [];
-            isRecording = true;
-            enableRecordingUI(true);
-            mediaRecorder.start();
-            showStatus("info", "🎙️ Recording... Speak now!");
-            addSystemMessage("Recording started - speak now!", "info");
-        };
-
-        stop.onclick = () => {
-            if (!isRecording) return;
-
-            isRecording = false;
-            enableRecordingUI(false);
-            mediaRecorder.stop();
-            showStatus("info", "🛑 Recording stopped, processing...");
-            addSystemMessage("Recording stopped, processing...", "info");
-        };
-
-        reset.onclick = doReset;
-
-        mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) {
-                chunks.push(e.data);
-            }
-        };
-
-        mediaRecorder.onstop = async () => {
-            if (chunks.length === 0) {
-                showStatus("error", "No audio data recorded");
-                addSystemMessage("No audio data recorded", "error");
-                return;
-            }
-
-            let blob = new Blob(chunks, { type: "audio/webm" });
-            // console.log("Audio blob created:", blob.size, "bytes");
-
-            userAudioBlobs.push(blob);
-            await sendAudio(blob);
-        };
-
-        mediaRecorder.onerror = (event) => {
-            // console.error("MediaRecorder error:", event.error);
-            showStatus("error", `Recording error: ${event.error.name}`);
-            addSystemMessage(`Recording error: ${event.error.name}`, "error");
-            isRecording = false;
-            enableRecordingUI(false);
-        };
-    } catch (err) {
-        // console.error("Error accessing microphone:", err);
-        let errorMessage = "Microphone access denied";
-        let suggestion = "Please reload and allow microphone permission.";
-
-        if (err.name === "NotAllowedError") {
-            errorMessage = "Microphone permission denied";
-            suggestion =
-                "Please click on the microphone icon in the address bar and allow access, then refresh.";
-        } else if (err.name === "NotFoundError") {
-            errorMessage = "No microphone found";
-            suggestion = "Please connect a microphone and refresh the page.";
-        } else if (err.name === "NotReadableError") {
-            errorMessage = "Microphone is busy";
-            suggestion =
-                "Close other applications using the microphone and refresh.";
-        }
-
-        showStatus("error", `${errorMessage}. ${suggestion}`);
-        addSystemMessage(`${errorMessage}. ${suggestion}`, "error");
-
-        record = $("record");
-        stop = $("stop");
-        reset = $("reset");
-
-        [record, stop, reset].forEach((btn) => {
-            if (btn) {
-                btn.disabled = true;
-                btn.classList.add("opacity-50", "cursor-not-allowed");
+            } else {
+                stopRecording();
+                toggleChatText.innerHTML = `
+                <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="32px"
+                                        height="32px"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                    >
+                                        <path
+                                            d="M20 12V13C20 17.4183 16.4183 21 12 21C7.58172 21 4 17.4183 4 13V12M12 17C9.79086 17 8 15.2091 8 13V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V13C16 15.2091 14.2091 17 12 17Z"
+                                            stroke="#ffffff"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        />
+                                    </svg>
+                                    `;
+                toggleChatBtn.classList.remove(
+                    "bg-red-400/50",
+                    "border-red-400"
+                );
+                toggleChatBtn.classList.add(
+                    "hover:bg-green-400/50",
+                    "hover:border-green-400"
+                );
             }
         });
-
-        if (record) {
-            record.onclick = () => {
-                showStatus(
-                    "error",
-                    "Microphone access required. Please refresh and allow permission."
-                );
-                addSystemMessage(
-                    "Microphone access required. Please refresh and allow permission.",
-                    "error"
-                );
-            };
-        }
     }
-}
+    if (clearBtn) clearBtn.addEventListener("click", clearTranscripts);
 
-async function sendAudio(blob) {
-    showStatus("info", "🤖 AI is thinking...");
-    showTypingIndicator();
-
-    const formData = new FormData();
-    formData.append("file", blob, "useraudio.webm");
-
-    try {
-        const resp = await fetch(`/agent/chat/${sessionId}`, {
-            method: "POST",
-            body: formData,
-        });
-
-        if (!resp.ok) {
-            const errorText = await resp.text().catch(() => "Unknown error");
-            showStatus("error", `Server error: ${resp.status} - ${errorText}`);
-            addSystemMessage(`Server error: ${resp.status}`, "error");
-            hideTypingIndicator();
-            return;
-        }
-
-        const result = await resp.json();
-        console.log("Server response:", result);
-
-        hideTypingIndicator();
-
-        const userText =
-            result.user_message || result.user_prompt_text || "[Audio message]";
-        const aiText =
-            result.assistant_response ||
-            result.ai_response_text ||
-            "No response received";
-        const audioUrl = result.audio_url;
-
-        addMessageToConversation(userText, true);
-        addMessageToConversation(aiText, false);
-
-        // Handle errors
-        if (result.errors) {
-            const errors = result.errors;
-            let errorMessages = [];
-
-            if (errors.transcription_error) {
-                errorMessages.push(
-                    `Speech-to-text: ${errors.transcription_error}`
-                );
-            }
-            if (errors.llm_error) {
-                errorMessages.push(`AI processing: ${errors.llm_error}`);
-            }
-            if (errors.tts_error) {
-                errorMessages.push(`Text-to-speech: ${errors.tts_error}`);
-            }
-
-            if (errorMessages.length > 0) {
-                showStatus(
-                    "warn",
-                    `Partial success: ${errorMessages.join(", ")}`
-                );
-                addSystemMessage(
-                    `Some services had issues: ${errorMessages.join(", ")}`,
-                    "warning"
-                );
-            }
-        }
-
-        if (audioUrl) {
-            try {
-                showStatus("success", "🔊 Playing AI response...");
-
-                // Create or get audio player for AI response
-                let aiAudioPlayer = $("aiAudioPlayer");
-                if (!aiAudioPlayer) {
-                    aiAudioPlayer = new Audio();
-                    aiAudioPlayer.id = "aiAudioPlayer";
-                    aiAudioPlayer.preload = "none";
-                }
-
-                aiAudioPlayer.src = audioUrl;
-                await aiAudioPlayer.play();
-
-                aiAudioPlayer.onended = () => {
-                    showStatus("success", "✅ Response complete");
-                };
-
-                aiAudioPlayer.onerror = (e) => {
-                    console.error("Audio playback error:", e);
-                    showStatus(
-                        "warn",
-                        "Audio playback failed, but text response is available"
-                    );
-                    addSystemMessage(
-                        "Audio playback failed, but you can read the text response",
-                        "warning"
-                    );
-                };
-            } catch (playError) {
-                console.error("Failed to play AI audio:", playError);
-                showStatus("warn", "Could not play audio response");
-                addSystemMessage(
-                    "Could not play audio response, but text is available",
-                    "warning"
-                );
-            }
-        } else {
-            showStatus("success", "✅ Text response received (no audio)");
-            if (result.errors && result.errors.tts_error) {
-                addSystemMessage(
-                    "Text-to-speech unavailable, but text response is ready",
-                    "warning"
-                );
-            }
-        }
-    } catch (err) {
-        // console.error("Network error:", err);
-        hideTypingIndicator();
-
-        let errorMsg = "Network error";
-
-        if (err.name === "TypeError" && err.message.includes("fetch")) {
-            errorMsg = "Cannot connect to server";
-        } else if (err.name === "AbortError") {
-            errorMsg = "Request timed out";
-        }
-
-        showStatus("error", `${errorMsg}: ${err.message}`);
-        addSystemMessage(`${errorMsg}: Please check your connection`, "error");
-    }
-}
-
-function doReset() {
-    userAudioBlobs = [];
-    isRecording = false;
-    enableRecordingUI(false);
-    hideTypingIndicator();
-
-    fetch(`/agent/chat/${sessionId}`, { method: "DELETE" })
-        .then(() => {
-            showStatus("success", "Session reset!");
-            addSystemMessage("Session reset successfully", "success");
-        })
-        .catch(() => {
-            showStatus("error", "Could not reset on server.");
-            addSystemMessage("Could not reset session on server", "error");
-        });
-
-    clearConversation();
-}
-
-document.addEventListener("DOMContentLoaded", async () => {
-    // console.log("DOM loaded, initializing...");
-
-    initializeSessionDisplay();
-
-    await checkServerHealth();
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showStatus(
-            "error",
-            "Browser not supported. Please use Chrome, Firefox, or Safari."
-        );
-        addSystemMessage(
-            "Browser not supported. Please use Chrome, Firefox, or Safari.",
-            "error"
-        );
-        return;
-    }
-
-    if (!window.MediaRecorder) {
-        showStatus("error", "MediaRecorder not supported in this browser.");
-        addSystemMessage(
-            "MediaRecorder not supported in this browser.",
-            "error"
-        );
-        return;
-    }
-
-    await initializeRecording();
-
-    setInterval(checkServerHealth, 30000);
+    console.log("Connecting to WebSocket...");
+    // Connect WebSocket
+    connectWebSocket();
 });

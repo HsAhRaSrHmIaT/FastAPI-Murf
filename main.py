@@ -1,14 +1,16 @@
 """Main FastAPI application"""
-import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Form, Request, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 
-from app.core.config import settings
+from app.core.config import settings, get_all_user_keys, update_user_key
 from app.core.logging import setup_logging, get_logger
-from app.api import health, agent, legacy
+from app.api import health
+from app.api import search
+from websocket_handler import websocket_endpoint
 
 # Setup logging
 setup_logging()
@@ -16,9 +18,9 @@ logger = get_logger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
-    title="Voice Agent API",
-    description="AI-powered voice interaction platform with speech-to-text, LLM, and text-to-speech capabilities",
-    version="2.0.0",
+    title="AI Voice Chat API",
+    description="AI-powered real-time voice conversation with speech-to-speech pipeline using streaming LLM responses",
+    version="2.1.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -32,35 +34,52 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create upload directory
-os.makedirs(settings.upload_dir, exist_ok=True)
-
 # Static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount(f"/{settings.upload_dir}", StaticFiles(directory=settings.upload_dir), name="uploads")
 
 templates = Jinja2Templates(directory="templates")
 
 # Include API routes
 app.include_router(health.router)
-app.include_router(agent.router)
-app.include_router(legacy.router)
+app.include_router(search.router)
 
-logger.info("Voice Agent API initialized successfully")
+logger.info("AI Voice Chat API initialized successfully")
 
+# WebSocket endpoint using the refactored handler
+app.websocket("/ws")(websocket_endpoint)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    """Serve the main web interface"""
-    logger.info("Main interface requested")
+    logger.info("AI Voice Chat interface requested")
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.post("/update-keys")
+async def update_keys(request: Request):
+    form_data = await request.form()
+    assemblyai_api_key: Optional[str] = form_data.get("assemblyai_api_key")
+    google_api_key: Optional[str] = form_data.get("google_api_key")
+    murf_api_key: Optional[str] = form_data.get("murf_api_key")
+
+    # Update user keys using the utility functions
+    if assemblyai_api_key:
+        update_user_key("assemblyai_api_key", assemblyai_api_key)
+    if google_api_key:
+        update_user_key("google_api_key", google_api_key)
+    if murf_api_key:
+        update_user_key("murf_api_key", murf_api_key)
+
+    return {"message": "API keys saved successfully"}
+
+@app.get("/settings", response_class=HTMLResponse)
+async def read_settings(request: Request):
+    logger.info("AI Voice Chat settings requested")
+    user_keys = get_all_user_keys()
+    return templates.TemplateResponse("settings.html", {"request": request, "user_keys": user_keys})
 
 @app.on_event("startup")
 async def startup_event():
     """Application startup event"""
-    logger.info(f"Voice Agent API starting up on {settings.host}:{settings.port}")
-    logger.info(f"Upload directory: {settings.upload_dir}")
+    logger.info(f"AI Voice Chat API starting up on {settings.host}:{settings.port}")
     logger.info(f"Debug mode: {settings.debug}")
     
     # Log service availability
@@ -70,12 +89,10 @@ async def startup_event():
     if health_status.missing_api_keys:
         logger.warning(f"Missing API keys: {health_status.missing_api_keys}")
 
-
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown event"""
-    logger.info("Voice Agent API shutting down")
-
+    logger.info("AI Voice Chat API shutting down")
 
 if __name__ == "__main__":
     import uvicorn

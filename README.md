@@ -8,11 +8,14 @@ _Main Interface_
 ![Main Interface](screenshots/main.png)
 
 _AI Conversation_
-![AI Conversation](screenshots/thinking.png)
+![AI Conversation](screenshots/conversation.png)
 ![AI Conversation](screenshots/response.png)
 
 _Reset_
 ![Reset](screenshots/reset.png)
+
+_Disconnect_
+![Disconnect](screenshots/disconnect.png)
 
 ## 🌟 Core Features
 
