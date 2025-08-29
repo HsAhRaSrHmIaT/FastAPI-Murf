@@ -30,6 +30,9 @@ class HealthService:
             
         if not settings.google_api_key:
             missing_keys.append("GOOGLE_API_KEY")
+
+        if not settings.murf_api_key:
+            missing_keys.append("MURF_API_KEY")
         
         return missing_keys
     

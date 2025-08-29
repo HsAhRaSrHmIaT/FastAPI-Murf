@@ -61,7 +61,6 @@ async def update_keys(request: Request):
     assemblyai_api_key: Optional[str] = form_data.get("assemblyai_api_key")
     google_api_key: Optional[str] = form_data.get("google_api_key")
     murf_api_key: Optional[str] = form_data.get("murf_api_key")
-    ws_murf_api_url: Optional[str] = form_data.get("ws_murf_api_url")
 
     global user_keys
     if assemblyai_api_key:
@@ -70,8 +69,6 @@ async def update_keys(request: Request):
         settings.user_keys["google_api_key"] = google_api_key
     if murf_api_key:
         settings.user_keys["murf_api_key"] = murf_api_key
-    if ws_murf_api_url:
-        settings.user_keys["ws_murf_api_url"] = ws_murf_api_url
     save_user_keys()
     return {"message": "API keys saved successfully"}
 
