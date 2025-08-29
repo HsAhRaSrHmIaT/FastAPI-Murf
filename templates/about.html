@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>About - Calm Guide</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="static/styles.css" />
+    </head>
+    <body
+        class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white min-h-screen flex flex-col"
+    >
+        <div class="flex-1 flex items-center justify-center p-2 sm:p-4 select-none">
+            <div
+                class="bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white/20 shadow-2xl max-w-7xl w-full flex flex-col"
+            >
+                <!-- Header -->
+                <div
+                    class="p-3 sm:p-4 border-b border-white/10 flex justify-between items-center flex-shrink-0"
+                >
+                    <div class="flex-1 min-w-0">
+                        <h1
+                            class="text-xl sm:text-2xl lg:text-3xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-1 sm:mb-2 select-none tracking-wide"
+                        >
+                            📑 About Calm Guide
+                        </h1>
+                        <p class="text-slate-300 text-xs sm:text-sm ml-0 sm:ml-2 select-none">
+                            Learn more about our AI-powered voice assistant
+                        </p>
+                    </div>
+                    <button
+                        onclick="window.location.href='/'"
+                        class="bg-white/5 border border-white/10 w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:border-white/30 shadow-lg flex-shrink-0 ml-2"
+                        title="Back to Home"
+                    >
+                        <svg
+                            class="w-5 h-5 sm:w-6 sm:h-6"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15 19l-7-7 7-7"
+                            ></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 p-3 sm:p-4 space-y-4 min-h-0 overflow-y-auto">
+                    <div class="space-y-4">
+                        <!-- Welcome & Developer Section -->
+                        <div class="flex flex-col lg:flex-row gap-4">
+                            <!-- Welcome Section -->
+                            <div
+                                class="bg-white/5 backdrop-blur-lg rounded-2xl lg:rounded-br-lg p-6 border border-white/10 w-full lg:w-1/2"
+                            >
+                                <h2
+                                    class="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 flex items-center gap-2"
+                                >
+                                    <span class="text-xl sm:text-2xl">🎙️</span>
+                                    Welcome to Calm Guide
+                                </h2>
+                                <p
+                                    class="text-slate-300 leading-relaxed text-sm sm:text-base"
+                                >
+                                    Calm Guide is an innovative AI-powered voice
+                                    assistant designed to provide thoughtful,
+                                    composed, and supportive responses through
+                                    natural speech-to-speech conversations. Our
+                                    mission is to create a seamless and
+                                    intuitive way for users to interact with AI
+                                    technology. Speak keywords like <strong class="text-white">"search for"</strong> or <strong class="text-white">"find"</strong> to enable web search functionality and receive AI-summarized results with audio responses.
+                                </p>
+                            </div>
+
+                            <!-- Developer Section -->
+                            <div
+                                class="bg-white/5 backdrop-blur-lg rounded-2xl lg:rounded-bl-lg p-6 border border-white/10 w-full lg:w-1/2"
+                            >
+                                <h2
+                                    class="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 flex items-center gap-2"
+                                >
+                                    <span class="text-xl sm:text-2xl">👨‍💻</span>
+                                    Developed by Harshit Sharma
+                                </h2>
+                                <div class="space-y-4">
+                                    <p
+                                        class="text-slate-300 leading-relaxed text-sm sm:text-base"
+                                    >
+                                        A passionate software developer with
+                                        expertise in building innovative
+                                        applications using cutting-edge
+                                        technologies. With a strong
+                                        background in AI and web development, Harshit aims to create
+                                        impactful solutions that enhance
+                                        user experiences and bridge the gap
+                                        between complex technology and
+                                        everyday users.
+                                    </p>
+                                    <div
+                                        class="flex flex-wrap gap-2 sm:gap-3"
+                                    >
+                                        <button
+                                            onclick="window.open('https://github.com/HsAhRaSrHmIaT', '_blank')"
+                                            class="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/20 px-3 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm"
+                                        >
+                                            <svg
+                                                class="w-4 h-4"
+                                                fill="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                                                />
+                                            </svg>
+                                            GitHub
+                                        </button>
+                                        <button
+                                            onclick="window.open('https://linkedin.com/in/harshit-sharma-223612296', '_blank')"
+                                            class="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/20 px-3 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm"
+                                        >
+                                            <svg
+                                                class="w-4 h-4"
+                                                fill="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
+                                                />
+                                            </svg>
+                                            LinkedIn
+                                        </button>
+                                        <button
+                                            onclick="window.open('mailto:harshitsharma2.04@outlook.com', '_blank')"
+                                            class="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/20 px-3 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm"
+                                        >
+                                            <svg
+                                                class="w-4 h-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                                />
+                                            </svg>
+                                            Email
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Features & Technology Section -->
+                        <div class="flex flex-col xl:flex-row gap-4">
+                            <!-- Features Section -->
+                            <div
+                                class="bg-white/5 backdrop-blur-lg rounded-2xl xl:rounded-tr-lg p-6 border border-white/10 w-full xl:w-1/2"
+                            >
+                                <h2
+                                    class="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 flex items-center gap-2"
+                                >
+                                    <span class="text-xl sm:text-2xl">✨</span>
+                                    Key Features
+                                </h2>
+                                <div class="grid sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2 gap-4">
+                                    <div class="space-y-3">
+                                        <div class="flex items-start gap-3">
+                                            <span
+                                                class="text-purple-400 text-lg flex-shrink-0 mt-0.5"
+                                                >🎤</span
+                                            >
+                                            <div class="min-w-0">
+                                                <h3
+                                                    class="font-semibold text-white text-sm sm:text-base"
+                                                >
+                                                    Real-time Speech Recognition
+                                                </h3>
+                                                <p
+                                                    class="text-slate-400 text-xs sm:text-sm"
+                                                >
+                                                    Advanced STT using
+                                                    AssemblyAI for accurate
+                                                    voice-to-text conversion
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-start gap-3">
+                                            <span class="text-blue-400 text-lg flex-shrink-0 mt-0.5"
+                                                >🤖</span
+                                            >
+                                            <div class="min-w-0">
+                                                <h3
+                                                    class="font-semibold text-white text-sm sm:text-base"
+                                                >
+                                                    Intelligent AI Responses
+                                                </h3>
+                                                <p
+                                                    class="text-slate-400 text-xs sm:text-sm"
+                                                >
+                                                    Powered by Google Gemini 2.5
+                                                    Flash for contextual and
+                                                    helpful replies
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-start gap-3">
+                                            <span class="text-green-400 text-lg flex-shrink-0 mt-0.5"
+                                                >🔊</span
+                                            >
+                                            <div class="min-w-0">
+                                                <h3
+                                                    class="font-semibold text-white text-sm sm:text-base"
+                                                >
+                                                    Natural Text-to-Speech
+                                                </h3>
+                                                <p
+                                                    class="text-slate-400 text-xs sm:text-sm"
+                                                >
+                                                    High-quality voice synthesis
+                                                    using Murf AI for lifelike
+                                                    audio output
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-3">
+                                        <div class="flex items-start gap-3">
+                                            <span class="text-pink-400 text-lg flex-shrink-0 mt-0.5"
+                                                >⚡</span
+                                            >
+                                            <div class="min-w-0">
+                                                <h3
+                                                    class="font-semibold text-white text-sm sm:text-base"
+                                                >
+                                                    Real-time Streaming
+                                                </h3>
+                                                <p
+                                                    class="text-slate-400 text-xs sm:text-sm"
+                                                >
+                                                    Continuous conversation flow
+                                                    with minimal latency
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-start gap-3">
+                                            <span
+                                                class="text-yellow-400 text-lg flex-shrink-0 mt-0.5"
+                                                >🔍</span
+                                            >
+                                            <div class="min-w-0">
+                                                <h3
+                                                    class="font-semibold text-white text-sm sm:text-base"
+                                                >
+                                                    Web Search Integration
+                                                </h3>
+                                                <p
+                                                    class="text-slate-400 text-xs sm:text-sm"
+                                                >
+                                                    Search the web and get
+                                                    AI-summarized results with
+                                                    audio
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-start gap-3">
+                                            <span
+                                                class="text-indigo-400 text-lg flex-shrink-0 mt-0.5"
+                                                >🔐</span
+                                            >
+                                            <div class="min-w-0">
+                                                <h3
+                                                    class="font-semibold text-white text-sm sm:text-base"
+                                                >
+                                                    Secure & Private
+                                                </h3>
+                                                <p
+                                                    class="text-slate-400 text-xs sm:text-sm"
+                                                >
+                                                    Your API keys are stored
+                                                    locally and never shared
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Technology Stack -->
+                            <div
+                                class="bg-white/5 backdrop-blur-lg rounded-2xl xl:rounded-tl-lg p-6 border border-white/10 w-full xl:w-1/2"
+                            >
+                                <h2
+                                    class="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 flex items-center gap-2"
+                                >
+                                    <span class="text-xl sm:text-2xl">🛠️</span>
+                                    Technology Stack
+                                </h2>
+                                <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3 gap-3">
+                                    <div
+                                        class="text-center p-3 bg-white/5 rounded-xl border border-white/10"
+                                    >
+                                        <div class="text-base sm:text-lg mb-2">🐍</div>
+                                        <h3 class="font-semibold text-white text-sm sm:text-base">
+                                            FastAPI
+                                        </h3>
+                                        <p class="text-slate-400 text-xs sm:text-sm">
+                                            High-performance async web framework
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="text-center p-3 bg-white/5 rounded-xl border border-white/10"
+                                    >
+                                        <div class="text-base sm:text-lg mb-2">🎤</div>
+                                        <h3 class="font-semibold text-white text-sm sm:text-base">
+                                            AssemblyAI
+                                        </h3>
+                                        <p class="text-slate-400 text-xs sm:text-sm">
+                                            Advanced speech recognition
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="text-center p-3 bg-white/5 rounded-xl border border-white/10"
+                                    >
+                                        <div class="text-base sm:text-lg mb-2">🤖</div>
+                                        <h3 class="font-semibold text-white text-sm sm:text-base">
+                                            Google Gemini
+                                        </h3>
+                                        <p class="text-slate-400 text-xs sm:text-sm">
+                                            Powerful AI language model
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="text-center p-3 bg-white/5 rounded-xl border border-white/10"
+                                    >
+                                        <div class="text-base sm:text-lg mb-2">🔊</div>
+                                        <h3 class="font-semibold text-white text-sm sm:text-base">
+                                            Murf AI
+                                        </h3>
+                                        <p class="text-slate-400 text-xs sm:text-sm">
+                                            Natural text-to-speech synthesis
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="text-center p-3 bg-white/5 rounded-xl border border-white/10"
+                                    >
+                                        <div class="text-base sm:text-lg mb-2">🌐</div>
+                                        <h3 class="font-semibold text-white text-sm sm:text-base">
+                                            WebSocket
+                                        </h3>
+                                        <p class="text-slate-400 text-xs sm:text-sm">
+                                            Real-time bidirectional
+                                            communication
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="text-center p-3 bg-white/5 rounded-xl border border-white/10"
+                                    >
+                                        <div class="text-base sm:text-lg mb-2">🎨</div>
+                                        <h3 class="font-semibold text-white text-sm sm:text-base">
+                                            Tailwind CSS
+                                        </h3>
+                                        <p class="text-slate-400 text-xs sm:text-sm">
+                                            Modern responsive design
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-3 sm:p-4 border-t border-white/10 flex-shrink-0">
+                    <div class="text-center select-none">
+                        <p class="text-slate-400 text-xs sm:text-sm">
+                            Powered by
+                            <a
+                                class="text-purple-400 font-semibold hover:underline"
+                                href="https://fastapi.tiangolo.com/"
+                                >FastAPI</a
+                            >,
+                            <a
+                                class="text-pink-400 font-semibold hover:underline"
+                                href="https://murf.ai/"
+                                >MurfAI</a
+                            >,
+                            <a
+                                class="text-green-400 font-semibold hover:underline"
+                                href="https://www.assemblyai.com/"
+                                >AssemblyAI</a
+                            >, &
+                            <a
+                                class="text-blue-400 font-semibold hover:underline"
+                                href="http://gemini.google.com/"
+                                >Google Gemini</a
+                            >
+                        </p>
+                        <p class="text-slate-500 text-xs mt-1">
+                            Calm Guide v1.0.0
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

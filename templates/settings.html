@@ -24,13 +24,13 @@
                         >
                             ⚙️ Settings
                         </h1>
-                        <p class="text-slate-300 text-sm ml-2">
+                        <p class="text-slate-300 text-sm ml-2 select-none">
                             Configure your API keys for the AI voice chat
                         </p>
                     </div>
                     <button
                         onclick="window.location.href='/'"
-                        class="bg-white/5 border border-white/10 w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-red-400/50 hover:border-red-400 shadow-lg"
+                        class="bg-white/5 border border-white/10 w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:border-white/30 shadow-lg"
                     >
                         <svg
                             class="w-6 h-6"
@@ -49,7 +49,7 @@
                 </div>
 
                 <!-- Settings Form -->
-                <div class="flex-1 p-6 space-y-6 min-h-0 mt-2">
+                <div class="flex-1 p-6 space-y-6 min-h-0 mt-2 select-none">
                     <div
                         id="health-status"
                         class="text-gray-400 text-center mb-4 bg-white/5 border border-white/10 px-3 py-2 rounded-full shadow-lg w-40 mx-auto"
@@ -324,16 +324,6 @@
                 </div>
             </div>
         </div>
-        <footer class="text-center py-4 flex-shrink-0">
-            <p class="text-gray-400 text-sm">
-                Powered by
-                <span class="text-purple-400 font-semibold">FastAPI</span>,
-                <span class="text-pink-400 font-semibold">MurfAI</span>,
-                <span class="text-green-400 font-semibold">AssemblyAI</span>
-                &
-                <span class="text-blue-400 font-semibold">Google Gemini</span>
-            </p>
-        </footer>
         <script src="/static/settings.js"></script>
     </body>
 </html>

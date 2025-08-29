@@ -76,6 +76,11 @@ async def read_settings(request: Request):
     user_keys = get_all_user_keys()
     return templates.TemplateResponse("settings.html", {"request": request, "user_keys": user_keys})
 
+@app.get("/about", response_class=HTMLResponse)
+async def read_about(request: Request):
+    logger.info("AI Voice Chat about page requested")
+    return templates.TemplateResponse("about.html", {"request": request})
+
 @app.on_event("startup")
 async def startup_event():
     """Application startup event"""
