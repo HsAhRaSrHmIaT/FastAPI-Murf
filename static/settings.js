@@ -5,7 +5,6 @@ function maskValue(value) {
     return "•".repeat(value.length);
 }
 
-
 function toggleVisibility(inputId) {
     const input = document.getElementById(inputId);
     const prefix = inputId.split("_")[0];
@@ -145,3 +144,20 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 });
+
+async function fetchHealthStatus() {
+    const res = await fetch("/health/");
+    const data = await res.json();
+    let html = `<p class="${data.status === "Healthy" ? "text-green-400" : data.status === "Degraded" ? "text-yellow-400" : "text-red-400"}"><strong>Status:</strong> ${data.status}</p>`;
+    // if (data.missing_api_keys && data.missing_api_keys.length > 0) {
+    //     html += `<strong>Missing API Keys:</strong> <ul>`;
+    //     data.missing_api_keys.forEach((key) => {
+    //         html += `<li>${key}</li>`;
+    //     });
+    //     html += `</ul>`;
+    // }
+    document.getElementById("health-status").innerHTML = html;
+}
+
+// Call this function when the page loads
+window.addEventListener("DOMContentLoaded", fetchHealthStatus);

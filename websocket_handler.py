@@ -249,7 +249,7 @@ class TurnDetectionWebSocketHandler:
 
             # Send accumulated LLM response to TTS service and print base64 audio
             try:
-                audio_b64 = await tts_service(accumulated_response)
+                audio_b64 = await tts_service.generate_speech(accumulated_response)
                 # The tts_service function already prints the base64 audio to the console
                 logger.info(f"Generated audio for LLM response (base64): {audio_b64[:100]}... (length: {len(audio_b64)})")
                 if audio_b64:

@@ -1,11 +1,15 @@
 """Health monitoring service"""
 from typing import List
-from app.core.config import settings
+
+from httpx import get
+from app.core.config import settings, get_api_key
 from app.core.logging import get_logger
 from app.models.schemas import HealthStatus
+
 from app.services.stt_service import stt_service
 from app.services.llm_service import llm_service
 import time
+from app.services.tts_service import tts_service
 
 logger = get_logger(__name__)
 
@@ -24,14 +28,14 @@ class HealthService:
             List of missing API key names
         """
         missing_keys = []
-            
-        if not settings.assemblyai_api_key:
+
+        if not get_api_key("assemblyai_api_key"):
             missing_keys.append("ASSEMBLYAI_API_KEY")
             
-        if not settings.google_api_key:
+        if not get_api_key("google_api_key"):
             missing_keys.append("GOOGLE_API_KEY")
 
-        if not settings.murf_api_key:
+        if not get_api_key("murf_api_key"):
             missing_keys.append("MURF_API_KEY")
         
         return missing_keys
@@ -45,7 +49,8 @@ class HealthService:
         """
         return {
             "stt_service": "available" if stt_service.is_available() else "unavailable",
-            "llm_service": "available" if llm_service.is_available() else "unavailable"
+            "llm_service": "available" if llm_service.is_available() else "unavailable",
+            "tts_service": "available" if tts_service.is_available() else "unavailable"
         }
     
     def get_health_status(self) -> HealthStatus:
@@ -58,19 +63,18 @@ class HealthService:
         missing_keys = self.check_api_keys()
         services = self.check_services()
         
+        # Count available services
+        available_services = sum(1 for status in services.values() if status == "available")
+        total_services = len(services)
+        
         # Determine overall status
-        all_services_available = (
-            services["stt_service"] == "available" and 
-            services["llm_service"] == "available"
-        )
-        
-        if not missing_keys and all_services_available:
-            status = "healthy"
-        elif not all_services_available:
-            status = "down"
+        if not missing_keys and available_services == total_services:
+            status = "Healthy"
+        elif available_services == 0:
+            status = "Down"
         else:
-            status = "degraded"
-        
+            status = "Degraded"
+
         logger.info(f"Health check: {status}, missing keys: {missing_keys}, services: {services}")
         
         return HealthStatus(

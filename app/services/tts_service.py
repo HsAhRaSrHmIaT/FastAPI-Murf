@@ -1,24 +1,35 @@
+"""Text-to-Speech service using Murf AI with WebSocket streaming"""
 import asyncio
 import websockets
 import json
 import base64
-from app.core.config import settings
+import re
+from app.core.config import settings, get_api_key
+from app.core.logging import get_logger
 
-API_KEY = settings.murf_api_key
-WS_URL = settings.ws_murf_api_url
-STATIC_CONTEXT_ID = "fastapi-demo-context-001"
+logger = get_logger(__name__)
 
-print("WS_URL:", WS_URL)
-print("API_KEY:", API_KEY)
+class TTSService:
+    """Text-to-Speech service using Murf AI WebSocket API"""
 
-async def tts_service(text: str) -> str:
-    """
-    Send text to Murf TTS via WebSocket and return base64 audio.
-    Returns the complete base64 audio data ready for browser playback.
-    """
-    try:
-        # Preprocess text: replace URLs with 'link to <domain>'
-        import re
+    def __init__(self):
+        self.api_key = get_api_key("murf_api_key")
+        self.ws_url = "wss://api.murf.ai/v1/speech/stream-input"  # Hardcoded WebSocket URL
+        self.context_id = "fastapi-demo-context-001"
+
+        if not self.api_key:
+            logger.warning("Murf API key not configured")
+            self._available = False
+        else:
+            self._available = True
+            logger.info("TTS service initialized with Murf AI")
+
+    def is_available(self) -> bool:
+        """Check if TTS service is available"""
+        return bool(get_api_key("murf_api_key"))
+
+    def _preprocess_text(self, text: str) -> str:
+        """Preprocess text by replacing URLs with readable format"""
         def url_replacer(match):
             url = match.group(0)
             # Remove markdown formatting if present
@@ -31,84 +42,102 @@ async def tts_service(text: str) -> str:
 
         # Replace URLs in the text (http/https, bare or markdown/backtick-wrapped)
         url_pattern = r'`?(https?://[^\s`]+)`?'
-        processed_text = re.sub(url_pattern, url_replacer, text)
+        return re.sub(url_pattern, url_replacer, text)
 
-        async with websockets.connect(
-            f"{WS_URL}?api-key={API_KEY}&sample_rate=44100&channel_type=MONO&format=WAV"
-        ) as ws:
-            # Send voice config with static context_id
-            voice_config_msg = {
-                "voice_config": {
-                    "voiceId": "en-US-amara",
-                    "style": "Conversational",
-                    "rate": 0,
-                    "pitch": 0,
-                    "variation": 1
-                },
-                "context_id": STATIC_CONTEXT_ID
-            }
-            print(f'Sending voice config: {voice_config_msg}')
-            await ws.send(json.dumps(voice_config_msg))
+    async def generate_speech(self, text: str) -> str:
+        """
+        Generate speech from text using Murf TTS via WebSocket.
+        Returns the complete base64 audio data ready for browser playback.
+        """
+        if not self.is_available():
+            logger.error("TTS service is not available")
+            return ""
 
-            # Send processed text
-            text_msg = {
-                "text": processed_text,
-                "end": True,
-                "context_id": STATIC_CONTEXT_ID
-            }
-            print(f'Sending text: {text_msg}')
-            await ws.send(json.dumps(text_msg))
+        try:
+            # Preprocess text
+            processed_text = self._preprocess_text(text)
 
-            # Collect all audio chunks
-            audio_chunks = []
-            first_chunk = True
-            
-            while True:
-                response = await ws.recv()
-                data = json.loads(response)
-                # print(f'Received data: {data}')
-                
-                if "audio" in data:
-                    audio_b64 = data["audio"]
-                    
-                    # Decode base64 to bytes for processing
-                    audio_bytes = base64.b64decode(audio_b64)
-                    
-                    # Skip WAV header only for the first chunk
-                    if first_chunk and len(audio_bytes) > 44:
-                        # Keep the WAV header for the first chunk since we need it for browser playback
-                        # The browser's Web Audio API can handle WAV files with headers
-                        audio_chunks.append(audio_bytes)
-                        first_chunk = False
-                    else:
-                        # For subsequent chunks, append the raw audio data
-                        audio_chunks.append(audio_bytes)
-                    
-                    print(f"[MURF AUDIO CHUNK]: Received {len(audio_bytes)} bytes")
-                    
-                if data.get("final"):
-                    break
+            async with websockets.connect(
+                f"{self.ws_url}?api-key={self.api_key}&sample_rate=44100&channel_type=MONO&format=WAV"
+            ) as ws:
+                # Send voice config with static context_id
+                voice_config_msg = {
+                    "voice_config": {
+                        "voiceId": "en-US-amara",
+                        "style": "Conversational",
+                        "rate": 0,
+                        "pitch": 0,
+                        "variation": 1
+                    },
+                    "context_id": self.context_id
+                }
+                logger.debug(f'Sending voice config: {voice_config_msg}')
+                await ws.send(json.dumps(voice_config_msg))
 
-            # Combine all audio chunks
-            if audio_chunks:
-                # For browser playback, we need to reconstruct a proper WAV file
-                combined_audio = b''.join(audio_chunks)
-                combined_b64 = base64.b64encode(combined_audio).decode('utf-8')
-                
-                print(f"[MURF AUDIO BASE64 COMPLETE]: {combined_b64[:100]}... (total length: {len(combined_b64)})")
-                return combined_b64
-            else:
-                print("[MURF AUDIO]: No audio data received")
-                return ""
-                
-    except Exception as e:
-        print(f"[MURF TTS ERROR]: {e}")
-        return ""
+                # Send processed text
+                text_msg = {
+                    "text": processed_text,
+                    "end": True,
+                    "context_id": self.context_id
+                }
+                logger.debug(f'Sending text: {text_msg}')
+                await ws.send(json.dumps(text_msg))
 
-# Example usage for testing
-if __name__ == "__main__":
-    # Test both versions
-    test_text = "With a single WebSocket connection, you can stream text input and receive synthesized audio continuously, without the overhead of repeated HTTP requests."
-    
-    print("Testing standard version:")
-    result1 = asyncio.run(tts_service(test_text))  
+                # Collect all audio chunks
+                audio_chunks = []
+                first_chunk = True
+
+                while True:
+                    response = await ws.recv()
+                    data = json.loads(response)
+
+                    if "audio" in data:
+                        audio_b64 = data["audio"]
+
+                        # Decode base64 to bytes for processing
+                        audio_bytes = base64.b64decode(audio_b64)
+
+                        # Skip WAV header only for the first chunk
+                        if first_chunk and len(audio_bytes) > 44:
+                            # Keep the WAV header for the first chunk since we need it for browser playback
+                            # The browser's Web Audio API can handle WAV files with headers
+                            audio_chunks.append(audio_bytes)
+                            first_chunk = False
+                        else:
+                            # For subsequent chunks, append the raw audio data
+                            audio_chunks.append(audio_bytes)
+
+                        logger.debug(f"Received audio chunk: {len(audio_bytes)} bytes")
+
+                    if data.get("final"):
+                        break
+
+                # Combine all audio chunks
+                if audio_chunks:
+                    # For browser playback, we need to reconstruct a proper WAV file
+                    combined_audio = b''.join(audio_chunks)
+                    combined_b64 = base64.b64encode(combined_audio).decode('utf-8')
+
+                    logger.info(f"Generated audio: {len(combined_b64)} characters")
+                    return combined_b64
+                else:
+                    logger.warning("No audio data received from Murf TTS")
+                    return ""
+
+        except Exception as e:
+            logger.error(f"TTS service error: {e}")
+            return ""
+
+
+# Legacy function for backward compatibility
+async def tts_service(text: str) -> str:
+    """
+    Legacy function - use TTSService class instead.
+    Send text to Murf TTS via WebSocket and return base64 audio.
+    """
+    service = TTSService()
+    return await service.generate_speech(text)
+
+
+# Global TTS service instance
+tts_service = TTSService()  

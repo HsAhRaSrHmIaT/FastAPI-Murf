@@ -1,6 +1,4 @@
 """Main FastAPI application"""
-import os
-import assemblyai
 from fastapi import FastAPI, Form, Request, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 
-from app.core.config import save_user_keys, settings
+from app.core.config import settings, get_all_user_keys, update_user_key
 from app.core.logging import setup_logging, get_logger
 from app.api import health
 from app.api import search
@@ -62,20 +60,21 @@ async def update_keys(request: Request):
     google_api_key: Optional[str] = form_data.get("google_api_key")
     murf_api_key: Optional[str] = form_data.get("murf_api_key")
 
-    global user_keys
+    # Update user keys using the utility functions
     if assemblyai_api_key:
-        settings.user_keys["assemblyai_api_key"] = assemblyai_api_key
+        update_user_key("assemblyai_api_key", assemblyai_api_key)
     if google_api_key:
-        settings.user_keys["google_api_key"] = google_api_key
+        update_user_key("google_api_key", google_api_key)
     if murf_api_key:
-        settings.user_keys["murf_api_key"] = murf_api_key
-    save_user_keys()
+        update_user_key("murf_api_key", murf_api_key)
+
     return {"message": "API keys saved successfully"}
 
 @app.get("/settings", response_class=HTMLResponse)
 async def read_settings(request: Request):
     logger.info("AI Voice Chat settings requested")
-    return templates.TemplateResponse("settings.html", {"request": request, "user_keys": settings.user_keys})
+    user_keys = get_all_user_keys()
+    return templates.TemplateResponse("settings.html", {"request": request, "user_keys": user_keys})
 
 @app.on_event("startup")
 async def startup_event():
