@@ -5,9 +5,9 @@ import json
 import base64
 import re
 from app.core.config import settings, get_api_key
-from app.core.logging import get_logger
+# from app.core.logging import get_logger
 
-logger = get_logger(__name__)
+# logger = get_logger(__name__)
 
 class TTSService:
     """Text-to-Speech service using Murf AI WebSocket API"""
@@ -18,11 +18,11 @@ class TTSService:
         self.context_id = "fastapi-demo-context-001"
 
         if not self.api_key:
-            logger.warning("Murf API key not configured")
+            # logger.warning("Murf API key not configured")
             self._available = False
         else:
             self._available = True
-            logger.info("TTS service initialized with Murf AI")
+            # logger.info("TTS service initialized with Murf AI")
 
     def is_available(self) -> bool:
         """Check if TTS service is available"""
@@ -50,7 +50,7 @@ class TTSService:
         Returns the complete base64 audio data ready for browser playback.
         """
         if not self.is_available():
-            logger.error("TTS service is not available")
+            # logger.error("TTS service is not available")
             return ""
 
         try:
@@ -71,7 +71,7 @@ class TTSService:
                     },
                     "context_id": self.context_id
                 }
-                logger.debug(f'Sending voice config: {voice_config_msg}')
+                # logger.debug(f'Sending voice config: {voice_config_msg}')
                 await ws.send(json.dumps(voice_config_msg))
 
                 # Send processed text
@@ -80,7 +80,7 @@ class TTSService:
                     "end": True,
                     "context_id": self.context_id
                 }
-                logger.debug(f'Sending text: {text_msg}')
+                # logger.debug(f'Sending text: {text_msg}')
                 await ws.send(json.dumps(text_msg))
 
                 # Collect all audio chunks
@@ -107,7 +107,7 @@ class TTSService:
                             # For subsequent chunks, append the raw audio data
                             audio_chunks.append(audio_bytes)
 
-                        logger.debug(f"Received audio chunk: {len(audio_bytes)} bytes")
+                        # logger.debug(f"Received audio chunk: {len(audio_bytes)} bytes")
 
                     if data.get("final"):
                         break
@@ -118,14 +118,14 @@ class TTSService:
                     combined_audio = b''.join(audio_chunks)
                     combined_b64 = base64.b64encode(combined_audio).decode('utf-8')
 
-                    logger.info(f"Generated audio: {len(combined_b64)} characters")
+                    # logger.info(f"Generated audio: {len(combined_b64)} characters")
                     return combined_b64
                 else:
-                    logger.warning("No audio data received from Murf TTS")
+                    # logger.warning("No audio data received from Murf TTS")
                     return ""
 
         except Exception as e:
-            logger.error(f"TTS service error: {e}")
+            # logger.error(f"TTS service error: {e}")
             return ""
 
 

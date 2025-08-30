@@ -10,36 +10,42 @@
     <body
         class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white min-h-screen"
     >
-        <div class="container mx-auto p-4 h-screen flex flex-col select-none">
+        <div
+            class="container mx-auto p-2 sm:p-4 h-screen flex flex-col select-none"
+        >
             <div class="flex justify-center flex-1 min-h-0">
                 <div
-                    class="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl max-w-4xl w-full flex flex-col h-full"
+                    class="bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white/20 shadow-2xl max-w-4xl w-full flex flex-col h-full"
                 >
                     <!-- Header -->
                     <div
-                        class="p-4 border-b border-white/10 flex justify-between items-center flex-shrink-0"
+                        class="p-3 sm:p-4 border-b border-white/10 flex justify-between items-center flex-shrink-0"
                     >
-                        <div>
+                        <div class="flex-1 min-w-0">
                             <h1
-                                class="text-3xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2 select-none tracking-wide"
+                                class="text-xl sm:text-2xl lg:text-3xl font-extrabold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-1 sm:mb-2 select-none tracking-wide"
                             >
                                 🎙️Calm Guide
                             </h1>
-                            <p class="text-slate-300 text-sm ml-2">
+                            <p
+                                class="text-slate-300 text-xs sm:text-sm ml-0 sm:ml-2 leading-tight"
+                            >
                                 Speak and pause - Guide responds to your voice
                                 in real-time
                             </p>
                         </div>
-                        <div class="flex flex-col items-end gap-2">
+                        <div
+                            class="flex flex-col items-end gap-1 sm:gap-2 flex-shrink-0 ml-2"
+                        >
                             <div
                                 id="connectionStatus"
-                                class="text-sm font-bold tracking-wide bg-white/10 backdrop-blur-lg p-2 rounded-full shadow-lg border border-white/20"
+                                class="text-xs sm:text-sm font-bold tracking-wide bg-white/10 backdrop-blur-lg p-1.5 sm:p-2 rounded-full shadow-lg border border-white/20"
                             >
                                 <span class="text-red-300">● Disconnected</span>
                             </div>
                             <div
                                 id="listeningStatus"
-                                class="text-xs font-bold tracking-wide bg-white/10 backdrop-blur-lg p-2 rounded-full shadow-lg border border-white/20 hidden"
+                                class="text-xs font-bold tracking-wide bg-white/10 backdrop-blur-lg p-1.5 sm:p-2 rounded-full shadow-lg border border-white/20 hidden"
                             >
                                 <span class="text-green-300"
                                     >🎤 Listening...</span
@@ -49,16 +55,18 @@
                     </div>
 
                     <!-- Real-time Status -->
-                    <div class="px-6 py-3 bg-white/5 border-b border-white/10">
+                    <div
+                        class="px-3 sm:px-6 py-2 sm:py-3 bg-white/5 border-b border-white/10"
+                    >
                         <div
                             id="realTimeStatus"
-                            class="text-center text-sm text-gray-400"
+                            class="text-center text-xs sm:text-sm text-gray-400"
                         >
                             Ready for AI voice conversation
                         </div>
                         <div
                             id="interimText"
-                            class="text-center text-sm text-blue-300 italic mt-1 min-h-[20px]"
+                            class="text-center text-xs sm:text-sm text-blue-300 italic mt-1 min-h-[16px] sm:min-h-[20px]"
                         >
                             <!-- Interim text appears here -->
                         </div>
@@ -67,15 +75,15 @@
                     <!-- Transcription Display -->
                     <div
                         id="transcriptionContainer"
-                        class="flex-1 p-6 overflow-y-auto space-y-4 min-h-0"
+                        class="flex-1 p-3 sm:p-6 overflow-y-auto space-y-4 min-h-0"
                         style="
-                            max-height: calc(100vh - 350px);
+                            max-height: calc(100vh - 280px);
                             scrollbar-width: thin;
                             scrollbar-color: #e3d5ee transparent;
                         "
                     >
-                        <div class="text-center text-gray-400 mt-8">
-                            <p>
+                        <div class="text-center text-gray-400 mt-4 sm:mt-8">
+                            <p class="text-sm sm:text-base">
                                 Click "Start Recording" and speak. Guide will
                                 respond when you stop talking.
                             </p>
@@ -88,101 +96,205 @@
 
                     <!-- Controls -->
                     <div
-                        class="p-3 border-t border-white/10 bg-white/5 rounded-3xl rounded-t-none flex-shrink-0 mt-auto flex justify-between items-center"
+                        class="p-3 border-t border-white/10 bg-white/5 rounded-3xl rounded-t-none flex-shrink-0 mt-auto"
                     >
-                        <div class="flex flex-col items-center flex-1 ml-12">
-                            <div class="text-center mb-4">
+                        <!-- Mobile Layout -->
+                        <div class="block lg:hidden">
+                            <div class="text-center mb-3">
                                 <h3
-                                    class="text-lg font-semibold text-white mb-1"
+                                    class="text-base sm:text-lg font-semibold text-white mb-1"
                                 >
                                     AI Voice Chat Controls
                                 </h3>
-                                <p class="text-gray-300 text-sm">
-                                    Voice conversation with Guide - speak and
-                                    get instant responses
+                                <p class="text-gray-300 text-xs sm:text-sm">
+                                    Voice conversation with Guide
                                 </p>
                             </div>
-                            <div class="flex mb-4">
-                                <div
-                                    class="flex flex-1 gap-4 justify-center"
+
+                            <!-- Main Controls -->
+                            <div class="flex justify-center gap-4 mb-3">
+                                <button
+                                    id="toggleChatBtn"
+                                    class="bg-white/5 border border-white/10 w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-green-400/50 hover:border-green-400 shadow-lg"
                                 >
-                                    <button
-                                        id="toggleChatBtn"
-                                        class="bg-white/5 border border-white/10 w-16 h-16 rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:bg-green-400/50 hover:border-green-400 shadow-lg"
-                                    >
-                                        <span id="toggleChatText">
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                width="32px"
-                                                height="32px"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                            >
-                                                <path
-                                                    d="M20 12V13C20 17.4183 16.4183 21 12 21C7.58172 21 4 17.4183 4 13V12M12 17C9.79086 17 8 15.2091 8 13V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V13C16 15.2091 14.2091 17 12 17Z"
-                                                    stroke="#ffffff"
-                                                    stroke-width="2"
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                />
-                                            </svg>
-                                        </span>
-                                    </button>
-                                    <button
-                                        id="clearBtn"
-                                        class="bg-white/5 border border-white/10 w-16 h-16 rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:bg-red-400/50 shadow-lg hover:border-red-400"
-                                    >
+                                    <span id="toggleChatText">
                                         <svg
-                                            class="w-8 h-8"
-                                            fill="none"
-                                            stroke="currentColor"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="28px"
+                                            height="28px"
+                                            class="sm:w-8 sm:h-8"
                                             viewBox="0 0 24 24"
+                                            fill="none"
                                         >
                                             <path
+                                                d="M20 12V13C20 17.4183 16.4183 21 12 21C7.58172 21 4 17.4183 4 13V12M12 17C9.79086 17 8 15.2091 8 13V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V13C16 15.2091 14.2091 17 12 17Z"
+                                                stroke="#ffffff"
+                                                stroke-width="2"
                                                 stroke-linecap="round"
                                                 stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                            ></path>
+                                            />
                                         </svg>
-                                    </button>
-                                </div>
+                                    </span>
+                                </button>
+                                <button
+                                    id="clearBtn"
+                                    class="bg-white/5 border border-white/10 w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-red-400/50 shadow-lg hover:border-red-400"
+                                >
+                                    <svg
+                                        class="w-7 h-7 sm:w-8 sm:h-8"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                        ></path>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Secondary Controls -->
+                            <div class="flex justify-center gap-3">
+                                <button
+                                    class="bg-white/5 border border-white/10 w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:border-white/30 shadow-lg"
+                                    onclick="window.location.href='/about'"
+                                >
+                                    <span
+                                        class="font-semibold italic text-base sm:text-lg"
+                                        >i</span
+                                    >
+                                </button>
+                                <button
+                                    class="bg-white/5 border border-white/10 w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:border-white/30 shadow-lg"
+                                    onclick="window.location.href='/settings'"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="w-5 h-5 sm:w-6 sm:h-6 inline-block"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                                        />
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                        />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
-                        <div class="flex flex-col gap-4">
-                            <button
-                                class="bg-white/5 border border-white/10 w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:border-white/30 shadow-lg"
-                                onclick="window.location.href='/about'"
+
+                        <!-- Desktop Layout (lg+) -->
+                        <div
+                            class="hidden lg:flex justify-between items-center"
+                        >
+                            <div
+                                class="flex flex-col items-center flex-1 ml-12"
                             >
-                                <span class="font-semibold italic text-lg"
-                                    >i</span
+                                <div class="text-center mb-4">
+                                    <h3
+                                        class="text-lg font-semibold text-white mb-1"
+                                    >
+                                        AI Voice Chat Controls
+                                    </h3>
+                                    <p class="text-gray-300 text-sm">
+                                        Voice conversation with Guide - speak
+                                        and get instant responses
+                                    </p>
+                                </div>
+                                <div class="flex mb-4">
+                                    <div
+                                        class="flex flex-1 gap-4 justify-center"
+                                    >
+                                        <button
+                                            id="toggleChatBtnDesktop"
+                                            class="bg-white/5 border border-white/10 w-16 h-16 rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:bg-green-400/50 hover:border-green-400 shadow-lg"
+                                        >
+                                            <span id="toggleChatTextDesktop">
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    width="32px"
+                                                    height="32px"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                >
+                                                    <path
+                                                        d="M20 12V13C20 17.4183 16.4183 21 12 21C7.58172 21 4 17.4183 4 13V12M12 17C9.79086 17 8 15.2091 8 13V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V13C16 15.2091 14.2091 17 12 17Z"
+                                                        stroke="#ffffff"
+                                                        stroke-width="2"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                    />
+                                                </svg>
+                                            </span>
+                                        </button>
+                                        <button
+                                            id="clearBtnDesktop"
+                                            class="bg-white/5 border border-white/10 w-16 h-16 rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:bg-red-400/50 shadow-lg hover:border-red-400"
+                                        >
+                                            <svg
+                                                class="w-8 h-8"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                ></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-4">
+                                <button
+                                    class="bg-white/5 border border-white/10 w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:border-white/30 shadow-lg"
+                                    onclick="window.location.href='/about'"
                                 >
-                            </button>
-                            <button
-                                class="bg-white/5 border border-white/10 w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:border-white/30 shadow-lg"
-                                onclick="window.location.href='/settings'"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="w-6 h-6 inline-block"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
+                                    <span class="font-semibold italic text-lg"
+                                        >i</span
+                                    >
+                                </button>
+                                <button
+                                    class="bg-white/5 border border-white/10 w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:border-white/30 shadow-lg"
+                                    onclick="window.location.href='/settings'"
                                 >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                                    />
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                    />
-                                </svg>
-                            </button>
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="w-6 h-6 inline-block"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                                        />
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

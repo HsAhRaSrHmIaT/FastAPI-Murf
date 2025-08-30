@@ -6,9 +6,9 @@ from app.services.llm_service import llm_service
 from app.services.tts_service import tts_service
 import urllib.parse
 import asyncio
-from app.core.logging import get_logger
+# from app.core.logging import get_logger
 
-logger = get_logger(__name__)
+# logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
@@ -168,9 +168,9 @@ async def duckduckgo_summary(q: str = Query(..., min_length=1), n: int = Query(3
         # Generate TTS audio synchronously and include it in the response
         try:
             audio_b64 = await tts_service.generate_speech(tts_text)
-            logger.info(f"TTS generated audio for search summary (length={len(audio_b64) if audio_b64 else 0})")
+            # logger.info(f"TTS generated audio for search summary (length={len(audio_b64) if audio_b64 else 0})")
         except Exception as exc:
-            logger.error(f"TTS error: {exc}")
+            # logger.error(f"TTS error: {exc}")
             audio_b64 = ""
 
         return {"summary": summary, "audio": audio_b64}

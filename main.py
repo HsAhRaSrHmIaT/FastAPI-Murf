@@ -7,14 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 
 from app.core.config import settings, get_all_user_keys, update_user_key
-from app.core.logging import setup_logging, get_logger
+# from app.core.logging import setup_logging, get_logger
 from app.api import health
 from app.api import search
 from websocket_handler import websocket_endpoint
 
 # Setup logging
-setup_logging()
-logger = get_logger(__name__)
+# setup_logging()
+# logger = get_logger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
@@ -43,14 +43,14 @@ templates = Jinja2Templates(directory="templates")
 app.include_router(health.router)
 app.include_router(search.router)
 
-logger.info("AI Voice Chat API initialized successfully")
+# logger.info("AI Voice Chat API initialized successfully")
 
 # WebSocket endpoint using the refactored handler
 app.websocket("/ws")(websocket_endpoint)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    logger.info("AI Voice Chat interface requested")
+    # logger.info("AI Voice Chat interface requested")
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/update-keys")
@@ -72,32 +72,32 @@ async def update_keys(request: Request):
 
 @app.get("/settings", response_class=HTMLResponse)
 async def read_settings(request: Request):
-    logger.info("AI Voice Chat settings requested")
+    # logger.info("AI Voice Chat settings requested")
     user_keys = get_all_user_keys()
     return templates.TemplateResponse("settings.html", {"request": request, "user_keys": user_keys})
 
 @app.get("/about", response_class=HTMLResponse)
 async def read_about(request: Request):
-    logger.info("AI Voice Chat about page requested")
+    # logger.info("AI Voice Chat about page requested")
     return templates.TemplateResponse("about.html", {"request": request})
 
-@app.on_event("startup")
-async def startup_event():
+# @app.on_event("startup")
+# async def startup_event():
     """Application startup event"""
-    logger.info(f"AI Voice Chat API starting up on {settings.host}:{settings.port}")
-    logger.info(f"Debug mode: {settings.debug}")
+    # logger.info(f"AI Voice Chat API starting up on {settings.host}:{settings.port}")
+    # logger.info(f"Debug mode: {settings.debug}")
     
     # Log service availability
-    from app.services.health_service import health_service
-    health_status = health_service.get_health_status()
-    logger.info(f"Application health: {health_status.status}")
-    if health_status.missing_api_keys:
-        logger.warning(f"Missing API keys: {health_status.missing_api_keys}")
+    # from app.services.health_service import health_service
+    # health_status = health_service.get_health_status()
+    # logger.info(f"Application health: {health_status.status}")
+    # if health_status.missing_api_keys:
+    #     logger.warning(f"Missing API keys: {health_status.missing_api_keys}")
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown event"""
-    logger.info("AI Voice Chat API shutting down")
+# @app.on_event("shutdown")
+# async def shutdown_event():
+#     """Application shutdown event"""
+#     logger.info("AI Voice Chat API shutting down")
 
 if __name__ == "__main__":
     import uvicorn

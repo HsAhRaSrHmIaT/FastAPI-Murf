@@ -2,15 +2,15 @@
 import json
 import asyncio
 from datetime import datetime
-from typing import Optional, Callable
+from typing import Optional
 from fastapi import WebSocket, WebSocketDisconnect
 
-from app.core.logging import get_logger
+# from app.core.logging import get_logger
 from app.services.stt_service import AssemblyAIStreamingTranscriber
 from app.services.llm_service import llm_service
 from app.services.tts_service import tts_service
 
-logger = get_logger(__name__)
+# logger = get_logger(__name__)
 
 
 class TurnDetectionWebSocketHandler:
@@ -29,8 +29,8 @@ class TurnDetectionWebSocketHandler:
     async def connect(self):
         """Accept WebSocket connection and initialize"""
         await self.websocket.accept()
-        logger.info("WebSocket connected for turn detection")
-        
+        # logger.info("WebSocket connected for turn detection")
+
         # Get the current event loop for thread-safe access
         self.main_loop = asyncio.get_running_loop()
         
@@ -56,7 +56,7 @@ class TurnDetectionWebSocketHandler:
                 await self.websocket.send_text(json.dumps(message))
                 self.message_queue.task_done()
             except Exception as e:
-                logger.error(f"Error sending queued message: {e}")
+                # logger.error(f"Error sending queued message: {e}")
                 break
     
     async def _send_message(self, message: dict):
@@ -71,8 +71,9 @@ class TurnDetectionWebSocketHandler:
                 self.main_loop
             )
         except Exception as e:
-            logger.error(f"Error queuing message: {e}")
-    
+            # logger.error(f"Error queuing message: {e}")
+            pass
+
     @staticmethod
     def _normalize_transcript(text: str) -> str:
         """Normalize transcript for comparison"""
@@ -105,13 +106,14 @@ class TurnDetectionWebSocketHandler:
                 }
                 self._queue_message(message)
         except Exception as e:
-            logger.error(f"Error handling interim transcript: {e}")
-    
+            # logger.error(f"Error handling interim transcript: {e}")
+            pass
+
     def _on_turn_end(self, final_transcript: str):
         """Callback when turn ends - user stopped talking"""
         try:
-            logger.info(f"Turn ended with final transcript: {final_transcript}")
-            
+            # logger.info(f"Turn ended with final transcript: {final_transcript}")
+
             # Normalize for comparison
             normalized_new = self._normalize_transcript(final_transcript)
             normalized_last = self._normalize_transcript(self.last_transcript)
@@ -125,7 +127,7 @@ class TurnDetectionWebSocketHandler:
                 
                 # Check if new version is better formatted
                 if self._is_better_formatted(final_transcript, self.last_transcript):
-                    logger.info(f"Updating with better formatted version: {final_transcript}")
+                    # logger.info(f"Updating with better formatted version: {final_transcript}")
                     
                     # Send update message to replace the previous one
                     message = {
@@ -136,12 +138,12 @@ class TurnDetectionWebSocketHandler:
                     }
                     self._queue_message(message)
                 else:
-                    logger.info(f"Skipped duplicate: {final_transcript}")
+                    # logger.info(f"Skipped duplicate: {final_transcript}")
                     return
             else:
                 # This is a new unique transcript
-                logger.info(f"Sent to UI: {final_transcript}")
-                
+                # logger.info(f"Sent to UI: {final_transcript}")
+
                 # Send final transcript and turn end notification
                 message = {
                     "type": "turn_end",
@@ -174,8 +176,9 @@ class TurnDetectionWebSocketHandler:
             self.last_transcript_time = current_time
             
         except Exception as e:
-            logger.error(f"Error handling turn end: {e}")
-    
+            # logger.error(f"Error handling turn end: {e}")
+            pass
+
     def _process_transcript_with_llm(self, transcript: str):
         """Process transcript with LLM and stream response"""
         try:
@@ -186,8 +189,9 @@ class TurnDetectionWebSocketHandler:
                     self.main_loop
                 )
         except Exception as e:
-            logger.error(f"Error starting LLM processing: {e}")
-    
+            # logger.error(f"Error starting LLM processing: {e}")
+            pass
+
     async def _stream_llm_response(self, transcript: str):
         """Stream LLM response to the WebSocket"""
         try:
@@ -205,8 +209,8 @@ class TurnDetectionWebSocketHandler:
                     "timestamp": datetime.now().isoformat()
                 })
                 return
-            
-            logger.info(f"Sending transcript to LLM: '{transcript[:50]}...'")
+
+            # logger.info(f"Sending transcript to LLM: '{transcript[:50]}...'")
             print(f"[LLM] Processing: {transcript}")
             
             # Send start of streaming response
@@ -234,7 +238,7 @@ class TurnDetectionWebSocketHandler:
                 })
                 
                 # Print to console as requested
-                print(f"[LLM Chunk {chunk_count}] {chunk}", end="", flush=True)
+                # print(f"[LLM Chunk {chunk_count}] {chunk}", end="", flush=True)
             
             # Send completion notification
             await self.message_queue.put({
@@ -245,13 +249,13 @@ class TurnDetectionWebSocketHandler:
             })
             
             print(f"\n[LLM] Complete response ({chunk_count} chunks): {accumulated_response}")
-            logger.info(f"LLM streaming complete. Total chunks: {chunk_count}, Final length: {len(accumulated_response)}")
+            # logger.info(f"LLM streaming complete. Total chunks: {chunk_count}, Final length: {len(accumulated_response)}")
 
             # Send accumulated LLM response to TTS service and print base64 audio
             try:
                 audio_b64 = await tts_service.generate_speech(accumulated_response)
                 # The tts_service function already prints the base64 audio to the console
-                logger.info(f"Generated audio for LLM response (base64): {audio_b64[:100]}... (length: {len(audio_b64)})")
+                # logger.info(f"Generated audio for LLM response (base64): {audio_b64[:100]}... (length: {len(audio_b64)})")
                 if audio_b64:
                     await self.message_queue.put({
                         "type": "tts_response",
@@ -259,10 +263,11 @@ class TurnDetectionWebSocketHandler:
                         "timestamp": datetime.now().isoformat()
                     })
             except Exception as tts_exc:
-                logger.error(f"Error sending LLM response to TTS service: {tts_exc}")
+                # logger.error(f"Error sending LLM response to TTS service: {tts_exc}")
+                pass
 
         except Exception as e:
-            logger.error(f"Error streaming LLM response: {e}")
+            # logger.error(f"Error streaming LLM response: {e}")
             await self.message_queue.put({
                 "type": "llm_error",
                 "message": f"Error generating AI response: {str(e)}",
@@ -272,7 +277,7 @@ class TurnDetectionWebSocketHandler:
     async def handle_command(self, command: str):
         """Handle WebSocket commands"""
         if command == "start_recording":
-            logger.info("Starting turn detection recording session")
+            # logger.info("Starting turn detection recording session")
             self.transcriber = AssemblyAIStreamingTranscriber(sample_rate=16000)
             if self.transcriber.start_streaming(self._on_transcript_received, self._on_turn_end):
                 await self._send_message({
@@ -286,7 +291,7 @@ class TurnDetectionWebSocketHandler:
                 })
         
         elif command == "stop_recording":
-            logger.info("Stopping turn detection recording session")
+            # logger.info("Stopping turn detection recording session")
             if self.transcriber:
                 self.transcriber.stop_streaming()
                 self.transcriber = None
@@ -298,12 +303,12 @@ class TurnDetectionWebSocketHandler:
     def handle_audio_data(self, audio_data: bytes):
         """Handle incoming audio data"""
         if self.transcriber and len(audio_data) > 0:
-            logger.debug(f"Streaming {len(audio_data)} bytes of audio for turn detection")
+            # logger.debug(f"Streaming {len(audio_data)} bytes of audio for turn detection")
             self.transcriber.stream_audio(audio_data)
     
     async def disconnect(self):
         """Clean up resources on disconnect"""
-        logger.info("WebSocket disconnecting - cleaning up")
+        # logger.info("WebSocket disconnecting - cleaning up")
         
         # Stop transcriber
         if self.transcriber:
@@ -342,16 +347,19 @@ async def websocket_endpoint(websocket: WebSocket):
                         if command:
                             await handler.handle_command(command)
                     except json.JSONDecodeError:
-                        logger.error("Invalid JSON received")
-                
+                        # logger.error("Invalid JSON received")
+                        pass
+
                 elif "bytes" in message:
                     # Handle audio data
                     audio_data = message["bytes"]
                     handler.handle_audio_data(audio_data)
 
     except WebSocketDisconnect:
-        logger.info("WebSocket disconnected")
+        # logger.info("WebSocket disconnected")
+        pass
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+        # logger.error(f"WebSocket error: {e}")
+        pass
     finally:
         await handler.disconnect()
