@@ -1,10 +1,11 @@
 """Main FastAPI application"""
-from fastapi import FastAPI, Form, Request, WebSocket
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
+import os
 
 from app.core.config import settings, get_all_user_keys, update_user_key
 # from app.core.logging import setup_logging, get_logger
@@ -107,10 +108,11 @@ async def read_about(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
+    port = int(os.getenv("PORT", settings.port))
     uvicorn.run(
         "main:app",
         host=settings.host,
-        port=settings.port,
+        port=port,
         reload=settings.debug,
         log_level="info" if settings.debug else "warning"
     )
