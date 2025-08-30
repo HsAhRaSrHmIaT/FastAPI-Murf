@@ -100,8 +100,9 @@ async function playAudioFromBase64(base64Audio) {
 }
 
 // Connect to WebSocket
-function connectWebSocket() {
-    const wsUrl = `ws://${window.location.host}/ws`;
+function connectWebSocket(path = '/ws') {
+    const proto = (location.protocol === "https:") ? "wss" : "ws";
+    const wsUrl = `${proto}://${location.host}${path}`;
     console.log("Attempting to connect to WebSocket:", wsUrl);
 
     websocket = new WebSocket(wsUrl);
