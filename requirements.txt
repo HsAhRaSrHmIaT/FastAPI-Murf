@@ -19,6 +19,9 @@ beautifulsoup4==4.12.2
 pydantic==2.11.7
 pydantic-settings
 
+# Encryption
+cryptography>=41.0.0
+
 # System dependencies (auto-installed)
 annotated-types==0.7.0
 anyio==4.9.0

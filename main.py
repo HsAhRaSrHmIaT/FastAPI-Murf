@@ -83,16 +83,22 @@ async def read_about(request: Request):
 
 # @app.on_event("startup")
 # async def startup_event():
-    """Application startup event"""
-    # logger.info(f"AI Voice Chat API starting up on {settings.host}:{settings.port}")
-    # logger.info(f"Debug mode: {settings.debug}")
-    
-    # Log service availability
-    # from app.services.health_service import health_service
-    # health_status = health_service.get_health_status()
-    # logger.info(f"Application health: {health_status.status}")
-    # if health_status.missing_api_keys:
-    #     logger.warning(f"Missing API keys: {health_status.missing_api_keys}")
+#     """Application startup event: enforce presence of MASTER_KEY in production.
+
+#     For localhost/dev we allow missing MASTER_KEY to preserve developer
+#     convenience. In production (when settings.debug is False) the app will
+#     raise RuntimeError so deployments (Railway, Docker, systemd) fail fast and
+#     the operator sets the required env var.
+#     """
+#     # logger.info(f"AI Voice Chat API starting up on {settings.host}:{settings.port}")
+#     # logger.info(f"Debug mode: {settings.debug}")
+#     from app.core.config import has_master_key
+
+#     if not has_master_key() and not settings.debug:
+#         # Fail fast in production if MASTER_KEY is missing
+#         raise RuntimeError(
+#             "MASTER_KEY is required in production for encrypting user-provided secrets."
+#         )
 
 # @app.on_event("shutdown")
 # async def shutdown_event():
