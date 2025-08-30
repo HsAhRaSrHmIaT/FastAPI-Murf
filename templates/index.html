@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="viewport" content="widt</div>h=device-width, initial-scale=1.0" />
         <title>AI Voice Chat - Speech-to-Speech Conversation</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="static/styles.css" />
@@ -98,106 +98,8 @@
                     <div
                         class="p-3 border-t border-white/10 bg-white/5 rounded-3xl rounded-t-none flex-shrink-0 mt-auto"
                     >
-                        <!-- Mobile Layout -->
-                        <div class="block lg:hidden">
-                            <div class="text-center mb-3">
-                                <h3
-                                    class="text-base sm:text-lg font-semibold text-white mb-1"
-                                >
-                                    AI Voice Chat Controls
-                                </h3>
-                                <p class="text-gray-300 text-xs sm:text-sm">
-                                    Voice conversation with Guide
-                                </p>
-                            </div>
-
-                            <!-- Main Controls -->
-                            <div class="flex justify-center gap-4 mb-3">
-                                <button
-                                    id="toggleChatBtn"
-                                    class="bg-white/5 border border-white/10 w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-green-400/50 hover:border-green-400 shadow-lg"
-                                >
-                                    <span id="toggleChatText">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="28px"
-                                            height="28px"
-                                            class="sm:w-8 sm:h-8"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                        >
-                                            <path
-                                                d="M20 12V13C20 17.4183 16.4183 21 12 21C7.58172 21 4 17.4183 4 13V12M12 17C9.79086 17 8 15.2091 8 13V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V13C16 15.2091 14.2091 17 12 17Z"
-                                                stroke="#ffffff"
-                                                stroke-width="2"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            />
-                                        </svg>
-                                    </span>
-                                </button>
-                                <button
-                                    id="clearBtn"
-                                    class="bg-white/5 border border-white/10 w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-red-400/50 shadow-lg hover:border-red-400"
-                                >
-                                    <svg
-                                        class="w-7 h-7 sm:w-8 sm:h-8"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                        ></path>
-                                    </svg>
-                                </button>
-                            </div>
-
-                            <!-- Secondary Controls -->
-                            <div class="flex justify-center gap-3">
-                                <button
-                                    class="bg-white/5 border border-white/10 w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:border-white/30 shadow-lg"
-                                    onclick="window.location.href='/about'"
-                                >
-                                    <span
-                                        class="font-semibold italic text-base sm:text-lg"
-                                        >i</span
-                                    >
-                                </button>
-                                <button
-                                    class="bg-white/5 border border-white/10 w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all duration-200 flex items-center justify-center hover:bg-white/20 hover:border-white/30 shadow-lg"
-                                    onclick="window.location.href='/settings'"
-                                >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        class="w-5 h-5 sm:w-6 sm:h-6 inline-block"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                                        />
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                        />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Desktop Layout (lg+) -->
                         <div
-                            class="hidden lg:flex justify-between items-center"
+                            class="flex justify-between items-center"
                         >
                             <div
                                 class="flex flex-col items-center flex-1 ml-12"
@@ -218,10 +120,10 @@
                                         class="flex flex-1 gap-4 justify-center"
                                     >
                                         <button
-                                            id="toggleChatBtnDesktop"
+                                            id="toggleChatBtn"
                                             class="bg-white/5 border border-white/10 w-16 h-16 rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:bg-green-400/50 hover:border-green-400 shadow-lg"
                                         >
-                                            <span id="toggleChatTextDesktop">
+                                            <span id="toggleChatText">
                                                 <svg
                                                     xmlns="http://www.w3.org/2000/svg"
                                                     width="32px"
@@ -240,7 +142,7 @@
                                             </span>
                                         </button>
                                         <button
-                                            id="clearBtnDesktop"
+                                            id="clearBtn"
                                             class="bg-white/5 border border-white/10 w-16 h-16 rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:bg-red-400/50 shadow-lg hover:border-red-400"
                                         >
                                             <svg

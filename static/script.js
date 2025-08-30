@@ -821,42 +821,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Duplicate functionality for both mobile and desktop buttons
-function setupButtonFunctionality() {
-    const mobileToggleBtn = document.getElementById("toggleChatBtn");
-    const desktopToggleBtn = document.getElementById("toggleChatBtnDesktop");
-    const mobileClearBtn = document.getElementById("clearBtn");
-    const desktopClearBtn = document.getElementById("clearBtnDesktop");
-
-    // Add event listeners to both sets of buttons
-    if (mobileToggleBtn && desktopToggleBtn) {
-        mobileToggleBtn.addEventListener("click", function () {
-            // Your toggle chat functionality here
-            console.log("Mobile toggle chat clicked");
-        });
-
-        desktopToggleBtn.addEventListener("click", function () {
-            // Your toggle chat functionality here
-            console.log("Desktop toggle chat clicked");
-        });
-    }
-
-    if (mobileClearBtn && desktopClearBtn) {
-        mobileClearBtn.addEventListener("click", function () {
-            // Your clear functionality here
-            console.log("Mobile clear clicked");
-        });
-
-        desktopClearBtn.addEventListener("click", function () {
-            // Your clear functionality here
-            console.log("Desktop clear clicked");
-        });
-    }
-}
-
-// Initialize button functionality when DOM is loaded
-document.addEventListener("DOMContentLoaded", setupButtonFunctionality);
-
 // Initialize on page load
 document.addEventListener("DOMContentLoaded", function () {
     toggleChatBtn = document.getElementById("toggleChatBtn");
