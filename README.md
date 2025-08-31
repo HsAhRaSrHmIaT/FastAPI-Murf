@@ -1,4 +1,4 @@
-# 🧑‍💼 Meet Calm Guide: Your AI Assistant
+# Meet Calm Guide: Your AI Assistant
 
 **Calm Guide** is the AI persona powering this app. Designed to be friendly, calm, supportive, and concise, Calm Guide provides thoughtful responses and maintains a composed tone in every interaction. Calm Guide is developed by Harshit Sharma and is always here to help you as best as possible.
 
