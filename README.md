@@ -6,10 +6,10 @@
 ## 📸 Screenshots
 
 _Main Interface_
-![Main Interface](screenshots/main.png)
+![Main Interface](screenshots/main1.png)
 
 _AI Conversation_
-![AI Conversation](screenshots/conversation.png)
+![AI Conversation](screenshots/conversation1.png)
 ![AI Conversation](screenshots/search.png)
 
 _About_
@@ -19,10 +19,10 @@ _Settings_
 ![Settings](screenshots/keys.png)
 
 _Reset_
-![Reset](screenshots/reset.png)
+![Reset](screenshots/reset1.png)
 
 _Disconnect_
-![Disconnect](screenshots/disconnect.png)
+![Disconnect](screenshots/disconnect1.png)
 
 ## 🌟 Core Features
 
