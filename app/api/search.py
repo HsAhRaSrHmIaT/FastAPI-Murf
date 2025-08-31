@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Request
 from typing import List, Dict
 import httpx
 from bs4 import BeautifulSoup
-from app.services.llm_service import llm_service
-from app.services.tts_service import tts_service
+from app.services.llm_service import LLMService
+from app.services.tts_service import TTSService
+from app.core.config import get_api_keys_from_request
 import urllib.parse
 import asyncio
-from app.core.logging import get_logger
+# from app.core.logging import get_logger
 
-logger = get_logger(__name__)
+# logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
@@ -88,11 +89,18 @@ async def duckduckgo_search(q: str = Query(..., min_length=1)) -> List[Dict[str,
 
 
 @router.get("/duckduckgo_summary")
-async def duckduckgo_summary(q: str = Query(..., min_length=1), n: int = Query(3, ge=1, le=10)) -> Dict[str, str]:
+async def duckduckgo_summary(request: Request, q: str = Query(..., min_length=1), n: int = Query(3, ge=1, le=10)) -> Dict[str, str]:
     """Search DuckDuckGo for q, take top `n` results and ask the LLM to summarize them.
 
     Returns JSON: {"summary": "..."}
     """
+    # Extract API keys from request headers
+    api_keys = get_api_keys_from_request(request=request)
+    
+    # Create service instances with user API keys
+    llm = LLMService(api_key=api_keys.get('google_api_key'))
+    tts = TTSService(api_key=api_keys.get('murf_api_key'))
+    
     # Fetch raw results
     # Use DuckDuckGo's html host which avoids an initial redirect
     search_url = "https://html.duckduckgo.com/html/"
@@ -146,11 +154,11 @@ async def duckduckgo_summary(q: str = Query(..., min_length=1), n: int = Query(3
     prompt = "\n".join(prompt_lines)
 
     # Check LLM availability
-    if not llm_service.is_available():
+    if not llm.is_available():
         return {"summary": "LLM service is not available to summarize results."}
 
     try:
-        summary = await llm_service.generate_response(prompt, session_id="search_summary")
+        summary = await llm.generate_response(prompt, session_id="search_summary")
 
         # For TTS, replace URLs with 'link to domain', but keep real URLs in summary for frontend
         import re
@@ -167,10 +175,10 @@ async def duckduckgo_summary(q: str = Query(..., min_length=1), n: int = Query(3
 
         # Generate TTS audio synchronously and include it in the response
         try:
-            audio_b64 = await tts_service.generate_speech(tts_text)
-            logger.info(f"TTS generated audio for search summary (length={len(audio_b64) if audio_b64 else 0})")
+            audio_b64 = await tts.generate_speech(tts_text)
+            # logger.info(f"TTS generated audio for search summary (length={len(audio_b64) if audio_b64 else 0})")
         except Exception as exc:
-            logger.error(f"TTS error: {exc}")
+            # logger.error(f"TTS error: {exc}")
             audio_b64 = ""
 
         return {"summary": summary, "audio": audio_b64}

@@ -1,12 +1,12 @@
 """Language Model service using Google Gemini AI with streaming support"""
 import google.generativeai as genai
-from typing import AsyncGenerator, List, Dict, Any
+from typing import AsyncGenerator, List, Dict, Any, Optional
 from app.core.config import settings
-from app.core.logging import get_logger
+# from app.core.logging import get_logger
 import asyncio
 import time
 
-logger = get_logger(__name__)
+# logger = get_logger(__name__)
 
 PERSONA = {
     "name": "Calm Guide",
@@ -34,20 +34,16 @@ PERSONA = {
 class LLMService:
     """Language Model service using Google Gemini AI"""
     
-    def __init__(self):
+    def __init__(self, api_key: Optional[str] = None):
         self.model = None
         self.conversation_history: Dict[str, List[Dict[str, str]]] = {}
-        
-        if not settings.google_api_key:
-            logger.warning("Google API key not found")
+        self.api_key = api_key
+        if not self.api_key:
             return
-            
         try:
-            genai.configure(api_key=settings.google_api_key)
+            genai.configure(api_key=self.api_key)
             self.model = genai.GenerativeModel('gemini-2.5-flash')
-            logger.info("LLM service initialized with Google Gemini 2.5 Flash")
         except Exception as e:
-            logger.error(f"Failed to initialize Gemini model: {e}")
             self.model = None
     
     def is_available(self) -> bool:
@@ -77,7 +73,7 @@ class LLMService:
         """Clear conversation history for a session"""
         if session_id in self.conversation_history:
             del self.conversation_history[session_id]
-            logger.info(f"Cleared conversation history for session: {session_id}")
+            # logger.info(f"Cleared conversation history for session: {session_id}")
     
     def _format_conversation_context(self, session_id: str) -> str:
         """Format conversation history as context"""
@@ -119,7 +115,7 @@ class LLMService:
             else:
                 full_prompt = f"{system_prompt}\n\nUser: {text}\n\nAssistant:"
             
-            logger.info(f"Generating streaming response for session {session_id}: '{text[:50]}...'")
+            # logger.info(f"Generating streaming response for session {session_id}: '{text[:50]}...'")
             
             # Generate streaming response
             response = self.model.generate_content(
@@ -139,7 +135,7 @@ class LLMService:
                 if chunk.text:
                     chunk_count += 1
                     accumulated_response += chunk.text
-                    logger.debug(f"Streaming chunk {chunk_count}: '{chunk.text[:30]}...'")
+                    # logger.debug(f"Streaming chunk {chunk_count}: '{chunk.text[:30]}...'")
                     yield chunk.text
                     
                     # Small delay to make streaming visible
@@ -148,14 +144,14 @@ class LLMService:
             # Add assistant response to conversation history
             if accumulated_response:
                 self.add_to_conversation(session_id, "assistant", accumulated_response)
-                logger.info(f"Completed streaming response for session {session_id}. "
-                          f"Total chunks: {chunk_count}, Length: {len(accumulated_response)}")
+                # logger.info(f"Completed streaming response for session {session_id}. "
+                #           f"Total chunks: {chunk_count}, Length: {len(accumulated_response)}")
             else:
-                logger.warning(f"Empty response generated for session {session_id}")
+                # logger.warning(f"Empty response generated for session {session_id}")
                 yield "I'm sorry, I couldn't generate a response. Please try again."
                 
         except Exception as e:
-            logger.error(f"LLM service error for session {session_id}: {str(e)}")
+            # logger.error(f"LLM service error for session {session_id}: {str(e)}")
             yield f"I encountered an error while processing your request: {str(e)}"
     
     async def generate_response(self, text: str, session_id: str = "default") -> str:
@@ -165,5 +161,5 @@ class LLMService:
             accumulated_response += chunk
         return accumulated_response
 
-# Global LLM service instance
-llm_service = LLMService()
+# Global LLM service instance - removed since we now use per-user API keys
+# llm_service = LLMService()
