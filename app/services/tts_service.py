@@ -1,10 +1,12 @@
 """Text-to-Speech service using Murf AI with WebSocket streaming"""
+
 import asyncio
 import websockets
 import json
 import base64
 import re
-from app.core.config import settings, get_api_key
+from typing import Optional
+from app.core.config import settings
 # from app.core.logging import get_logger
 
 # logger = get_logger(__name__)
@@ -12,21 +14,18 @@ from app.core.config import settings, get_api_key
 class TTSService:
     """Text-to-Speech service using Murf AI WebSocket API"""
 
-    def __init__(self):
-        self.api_key = get_api_key("murf_api_key")
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key
         self.ws_url = "wss://api.murf.ai/v1/speech/stream-input"  # Hardcoded WebSocket URL
         self.context_id = "fastapi-demo-context-001"
-
         if not self.api_key:
-            # logger.warning("Murf API key not configured")
             self._available = False
         else:
             self._available = True
-            # logger.info("TTS service initialized with Murf AI")
 
     def is_available(self) -> bool:
         """Check if TTS service is available"""
-        return bool(get_api_key("murf_api_key"))
+        return bool(self.api_key)
 
     def _preprocess_text(self, text: str) -> str:
         """Preprocess text by replacing URLs with readable format"""
@@ -50,12 +49,14 @@ class TTSService:
         Returns the complete base64 audio data ready for browser playback.
         """
         if not self.is_available():
-            # logger.error("TTS service is not available")
+            print(f"[DEBUG] TTS service not available, api_key: {bool(self.api_key)}")
             return ""
 
         try:
+            print(f"[DEBUG] Starting TTS generation for text: {text[:50]}...")
             # Preprocess text
             processed_text = self._preprocess_text(text)
+            print(f"[DEBUG] Processed text: {processed_text[:50]}...")
 
             async with websockets.connect(
                 f"{self.ws_url}?api-key={self.api_key}&sample_rate=44100&channel_type=MONO&format=WAV"
@@ -118,14 +119,14 @@ class TTSService:
                     combined_audio = b''.join(audio_chunks)
                     combined_b64 = base64.b64encode(combined_audio).decode('utf-8')
 
-                    # logger.info(f"Generated audio: {len(combined_b64)} characters")
+                    print(f"[DEBUG] TTS generation completed, audio length: {len(combined_b64)}")
                     return combined_b64
                 else:
-                    # logger.warning("No audio data received from Murf TTS")
+                    print(f"[DEBUG] TTS returned empty audio")
                     return ""
 
         except Exception as e:
-            # logger.error(f"TTS service error: {e}")
+            print(f"[DEBUG] TTS service error: {e}")
             return ""
 
 
@@ -139,5 +140,5 @@ async def tts_service(text: str) -> str:
     return await service.generate_speech(text)
 
 
-# Global TTS service instance
-tts_service = TTSService()  
+# Global TTS service instance - removed since we now use per-user API keys
+# tts_service = TTSService()  

@@ -100,8 +100,8 @@ async function playAudioFromBase64(base64Audio) {
 }
 
 // Connect to WebSocket
-function connectWebSocket(path = '/ws') {
-    const proto = (location.protocol === "https:") ? "wss" : "ws";
+function connectWebSocket(path = "/ws") {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
     const wsUrl = `${proto}://${location.host}${path}`;
     console.log("Attempting to connect to WebSocket:", wsUrl);
 
@@ -112,6 +112,21 @@ function connectWebSocket(path = '/ws') {
         connectionStatus.innerHTML =
             '<span class="text-green-300">● Connected</span>';
         addSystemMessage("Connected to AI Calm Guide server", "success");
+
+        // Send API keys from localStorage as the first message
+        const apiKeys = {
+            assemblyai_api_key:
+                localStorage.getItem("assemblyai_api_key") || "",
+            google_api_key: localStorage.getItem("google_api_key") || "",
+            murf_api_key: localStorage.getItem("murf_api_key") || "",
+        };
+
+        websocket.send(
+            JSON.stringify({
+                type: "api_keys",
+                data: apiKeys,
+            })
+        );
 
         // Test interim text element
         interimText.textContent = "Connection test - interim text working";
@@ -192,7 +207,10 @@ function handleWebSocketMessage(data) {
                 `Received TTS audio (base64 length: ${data.audio.length})`
             );
             if (data.audio) {
+                console.log("Playing TTS audio...");
                 playAudioFromBase64(data.audio);
+            } else {
+                console.log("TTS audio is empty");
             }
             break;
         case "llm_error":
@@ -316,8 +334,18 @@ function showSearchPrompt(query, message) {
     (async () => {
         resultsDiv.textContent = "Loading search results...";
         try {
+            const headers = {};
+            const assemblyaiKey = localStorage.getItem("assemblyai_api_key");
+            const googleKey = localStorage.getItem("google_api_key");
+            const murfKey = localStorage.getItem("murf_api_key");
+
+            if (assemblyaiKey) headers["x-assemblyai-api-key"] = assemblyaiKey;
+            if (googleKey) headers["x-google-api-key"] = googleKey;
+            if (murfKey) headers["x-murf-api-key"] = murfKey;
+
             const res = await fetch(
-                `/api/search/duckduckgo?q=${encodeURIComponent(query)}`
+                `/api/search/duckduckgo?q=${encodeURIComponent(query)}`,
+                { headers }
             );
             if (!res.ok) throw new Error(`Search failed: ${res.status}`);
             const results = await res.json();
@@ -343,10 +371,20 @@ function showSearchPrompt(query, message) {
             '<span class="animate-spin">⏳</span> Summarizing...';
 
         try {
+            const headers = {};
+            const assemblyaiKey = localStorage.getItem("assemblyai_api_key");
+            const googleKey = localStorage.getItem("google_api_key");
+            const murfKey = localStorage.getItem("murf_api_key");
+
+            if (assemblyaiKey) headers["x-assemblyai-api-key"] = assemblyaiKey;
+            if (googleKey) headers["x-google-api-key"] = googleKey;
+            if (murfKey) headers["x-murf-api-key"] = murfKey;
+
             const res = await fetch(
                 `/api/search/duckduckgo_summary?q=${encodeURIComponent(
                     query
-                )}&n=3`
+                )}&n=3`,
+                { headers }
             );
             if (!res.ok)
                 throw new Error(

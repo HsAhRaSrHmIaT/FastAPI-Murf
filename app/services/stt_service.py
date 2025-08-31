@@ -14,34 +14,28 @@ from typing import Optional, Callable
 class AssemblyAIStreamingTranscriber:
     """AssemblyAI streaming transcriber for real-time audio"""
     
-    def __init__(self, sample_rate: int = 16000):
+    def __init__(self, sample_rate: int = 16000, api_key: Optional[str] = None):
         self.sample_rate = sample_rate
         self.client = None
         self.on_transcript_callback: Optional[Callable] = None
         self.on_turn_end_callback: Optional[Callable] = None
         self.current_turn_transcript = ""
-
-        if not settings.assemblyai_api_key:
-            # logger.warning("AssemblyAI API key not found")
+        self.api_key = api_key
+        if not self.api_key:
             return
-            
-        aai.settings.api_key = settings.assemblyai_api_key
-        # logger.info(f"Initializing AssemblyAI streaming with sample rate: {sample_rate}")
+        aai.settings.api_key = self.api_key
         
     def start_streaming(self, on_transcript: Callable = None, on_turn_end: Callable = None):
         """Start streaming transcription session"""
-        if not settings.assemblyai_api_key:
-            # logger.error("Cannot start streaming: AssemblyAI API key not configured")
+        if not self.api_key:
             return False
-            
         try:
             self.on_transcript_callback = on_transcript
             self.on_turn_end_callback = on_turn_end
             self.current_turn_transcript = ""
-            
             self.client = StreamingClient(
                 StreamingClientOptions(
-                    api_key=settings.assemblyai_api_key,
+                    api_key=self.api_key,
                     api_host="streaming.assemblyai.com"
                 )
             )
@@ -171,12 +165,13 @@ class AssemblyAIStreamingTranscriber:
 class STTService:
     """Speech-to-Text service using AssemblyAI"""
     
-    def __init__(self):
-        if not settings.assemblyai_api_key:
+    def __init__(self, api_key: Optional[str] = None):
+        key_to_use = api_key  # Only use provided API key, no fallback to settings
+        if not key_to_use:
             # logger.warning("AssemblyAI API key not found")
             self._transcriber = None
         else:
-            aai.settings.api_key = settings.assemblyai_api_key
+            aai.settings.api_key = key_to_use
             self._transcriber = aai.Transcriber()
             # logger.info("STT service initialized with AssemblyAI")
     
@@ -214,5 +209,5 @@ class STTService:
             # logger.error(f"STT service error: {str(e)}")
             raise Exception(f"Speech-to-text failed: {str(e)}")
 
-# Global instances
-stt_service = STTService()
+# Global instances - removed since we now use per-user API keys
+# stt_service = STTService()

@@ -40,6 +40,23 @@ document.addEventListener("DOMContentLoaded", function () {
         'input[name="assemblyai_api_key"], input[name="google_api_key"], input[name="murf_api_key"]'
     );
 
+    // Prefill from localStorage if available
+    const inputIds = ["assemblyai_api_key", "google_api_key", "murf_api_key"];
+    inputIds.forEach((id) => {
+        const input = document.getElementById(id);
+        const stored = localStorage.getItem(id);
+        if (input && stored) {
+            input.value = stored;
+            input.dataset.originalValue = stored;
+            input.value = maskValue(stored);
+            input.dataset.masked = "true";
+        } else if (input && input.value.trim()) {
+            input.dataset.originalValue = input.value;
+            input.value = maskValue(input.value);
+            input.dataset.masked = "true";
+        }
+    });
+
     function checkInputs() {
         const anyFilled = Array.from(inputs).some((input) => {
             const valueToCheck =
@@ -85,70 +102,53 @@ document.addEventListener("DOMContentLoaded", function () {
     // Initial check on page load
     checkInputs();
 
-    // Handle form submission asynchronously
-    form.addEventListener("submit", async function (event) {
-        event.preventDefault(); // Prevent default form submission and redirect
-
-        // Prepare form data with original values
-        const formData = new FormData();
+    // Handle form submission: save to localStorage only
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
         inputs.forEach((input) => {
             const originalValue = input.dataset.originalValue || input.value;
-            formData.append(input.name, originalValue);
-        });
-
-        try {
-            const response = await fetch("/update-keys", {
-                method: "POST",
-                body: formData,
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                messageDiv.innerText = result.message;
-                messageDiv.className = "text-green-400 text-center mt-4";
-                setTimeout(() => {
-                    messageDiv.innerText = "";
-                    messageDiv.className = "";
-                }, 3000);
-
-                // After successful save, re-mask all password fields
-                inputs.forEach((input) => {
-                    if (
-                        input.type === "password" &&
-                        input.value.trim() !== ""
-                    ) {
-                        input.dataset.originalValue =
-                            input.dataset.originalValue || input.value;
-                        input.value = maskValue(input.dataset.originalValue);
-                        input.dataset.masked = "true";
-                    }
-                });
-            } else {
-                messageDiv.innerText = "Error saving keys.";
-                messageDiv.className = "text-red-400 text-center mt-4"; // Style error message
+            if (originalValue.trim()) {
+                localStorage.setItem(input.name, originalValue.trim());
             }
-        } catch (error) {
-            messageDiv.innerText = "Network error.";
-            messageDiv.className = "text-red-400 text-center mt-4";
-        }
-    });
+        });
+        messageDiv.innerText = "API keys saved locally!";
+        messageDiv.className = "text-green-400 text-center mt-4";
+        setTimeout(() => {
+            messageDiv.innerText = "";
+            messageDiv.className = "";
+        }, 3000);
 
-    // On page load, mask any pre-filled API keys
-    const inputIds = ["assemblyai_api_key", "google_api_key", "murf_api_key"];
-    inputIds.forEach((id) => {
-        const input = document.getElementById(id);
-        if (input && input.value.trim()) {
-            input.dataset.originalValue = input.value;
-            input.value = maskValue(input.value);
-            input.dataset.masked = "true";
-        }
+        // After save, re-mask all password fields
+        inputs.forEach((input) => {
+            if (input.type === "password" && input.value.trim() !== "") {
+                input.dataset.originalValue =
+                    input.dataset.originalValue || input.value;
+                input.value = maskValue(input.dataset.originalValue);
+                input.dataset.masked = "true";
+            }
+        });
     });
 });
 
 async function fetchHealthStatus() {
-    const res = await fetch("/health/");
+    const headers = {};
+    const assemblyaiKey = localStorage.getItem("assemblyai_api_key");
+    const googleKey = localStorage.getItem("google_api_key");
+    const murfKey = localStorage.getItem("murf_api_key");
+
+    if (assemblyaiKey) headers["x-assemblyai-api-key"] = assemblyaiKey;
+    if (googleKey) headers["x-google-api-key"] = googleKey;
+    if (murfKey) headers["x-murf-api-key"] = murfKey;
+
+    const res = await fetch("/health/", { headers });
     const data = await res.json();
-    let html = `<p class="${data.status === "Healthy" ? "text-green-400" : data.status === "Degraded" ? "text-yellow-400" : "text-red-400"}"><strong>Status:</strong> ${data.status}</p>`;
+    let html = `<p class="${
+        data.status === "Healthy"
+            ? "text-green-400"
+            : data.status === "Degraded"
+            ? "text-yellow-400"
+            : "text-red-400"
+    }"><strong>Status:</strong> ${data.status}</p>`;
     // if (data.missing_api_keys && data.missing_api_keys.length > 0) {
     //     html += `<strong>Missing API Keys:</strong> <ul>`;
     //     data.missing_api_keys.forEach((key) => {

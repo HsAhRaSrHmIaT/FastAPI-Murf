@@ -1,6 +1,6 @@
 """Language Model service using Google Gemini AI with streaming support"""
 import google.generativeai as genai
-from typing import AsyncGenerator, List, Dict, Any
+from typing import AsyncGenerator, List, Dict, Any, Optional
 from app.core.config import settings
 # from app.core.logging import get_logger
 import asyncio
@@ -34,20 +34,16 @@ PERSONA = {
 class LLMService:
     """Language Model service using Google Gemini AI"""
     
-    def __init__(self):
+    def __init__(self, api_key: Optional[str] = None):
         self.model = None
         self.conversation_history: Dict[str, List[Dict[str, str]]] = {}
-        
-        if not settings.google_api_key:
-            # logger.warning("Google API key not found")
+        self.api_key = api_key
+        if not self.api_key:
             return
-            
         try:
-            genai.configure(api_key=settings.google_api_key)
+            genai.configure(api_key=self.api_key)
             self.model = genai.GenerativeModel('gemini-2.5-flash')
-            # logger.info("LLM service initialized with Google Gemini 2.5 Flash")
         except Exception as e:
-            # logger.error(f"Failed to initialize Gemini model: {e}")
             self.model = None
     
     def is_available(self) -> bool:
@@ -165,5 +161,5 @@ class LLMService:
             accumulated_response += chunk
         return accumulated_response
 
-# Global LLM service instance
-llm_service = LLMService()
+# Global LLM service instance - removed since we now use per-user API keys
+# llm_service = LLMService()

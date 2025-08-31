@@ -10,7 +10,13 @@ _Main Interface_
 
 _AI Conversation_
 ![AI Conversation](screenshots/conversation.png)
-![AI Conversation](screenshots/response.png)
+![AI Conversation](screenshots/search.png)
+
+_About_
+![About](screenshots/about.png)
+
+_Settings_
+![Settings](screenshots/keys.png)
 
 _Reset_
 ![Reset](screenshots/reset.png)

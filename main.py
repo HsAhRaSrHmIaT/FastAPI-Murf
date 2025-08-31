@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 import os
 
-from app.core.config import settings, get_all_user_keys, update_user_key
+from app.core.config import settings
 # from app.core.logging import setup_logging, get_logger
 from app.api import health
 from app.api import search
@@ -54,28 +54,10 @@ async def read_root(request: Request):
     # logger.info("AI Voice Chat interface requested")
     return templates.TemplateResponse("index.html", {"request": request})
 
-@app.post("/update-keys")
-async def update_keys(request: Request):
-    form_data = await request.form()
-    assemblyai_api_key: Optional[str] = form_data.get("assemblyai_api_key")
-    google_api_key: Optional[str] = form_data.get("google_api_key")
-    murf_api_key: Optional[str] = form_data.get("murf_api_key")
-
-    # Update user keys using the utility functions
-    if assemblyai_api_key:
-        update_user_key("assemblyai_api_key", assemblyai_api_key)
-    if google_api_key:
-        update_user_key("google_api_key", google_api_key)
-    if murf_api_key:
-        update_user_key("murf_api_key", murf_api_key)
-
-    return {"message": "API keys saved successfully"}
-
 @app.get("/settings", response_class=HTMLResponse)
 async def read_settings(request: Request):
     # logger.info("AI Voice Chat settings requested")
-    user_keys = get_all_user_keys()
-    return templates.TemplateResponse("settings.html", {"request": request, "user_keys": user_keys})
+    return templates.TemplateResponse("settings.html", {"request": request})
 
 @app.get("/about", response_class=HTMLResponse)
 async def read_about(request: Request):

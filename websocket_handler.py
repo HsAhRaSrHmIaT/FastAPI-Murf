@@ -7,8 +7,8 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 # from app.core.logging import get_logger
 from app.services.stt_service import AssemblyAIStreamingTranscriber
-from app.services.llm_service import llm_service
-from app.services.tts_service import tts_service
+from app.services.llm_service import LLMService
+from app.services.tts_service import TTSService
 
 # logger = get_logger(__name__)
 
@@ -16,8 +16,10 @@ from app.services.tts_service import tts_service
 class TurnDetectionWebSocketHandler:
     """WebSocket handler for turn detection voice transcription"""
     
-    def __init__(self, websocket: WebSocket):
+    def __init__(self, websocket: WebSocket, api_keys: dict):
         self.websocket = websocket
+        self.api_keys = api_keys
+        print(f"[DEBUG] WebSocket handler initialized with API keys: {list(api_keys.keys())}")
         self.transcriber: Optional[AssemblyAIStreamingTranscriber] = None
         self.main_loop = None
         self.message_queue = None
@@ -195,40 +197,39 @@ class TurnDetectionWebSocketHandler:
     async def _stream_llm_response(self, transcript: str):
         """Stream LLM response to the WebSocket"""
         try:
+            from app.services.llm_service import LLMService
+            from app.services.tts_service import TTSService
             # Send thinking status
             await self.message_queue.put({
                 "type": "llm_thinking",
                 "message": "AI is thinking...",
                 "timestamp": datetime.now().isoformat()
             })
-            
-            if not llm_service.is_available():
+            llm = LLMService(api_key=self.api_keys['google_api_key'])
+            murf_key = self.api_keys.get('murf_api_key')
+            tts = TTSService(api_key=murf_key)
+            print(f"[DEBUG] LLM available: {llm.is_available()}")
+            print(f"[DEBUG] TTS available: {tts.is_available()}")
+            print(f"[DEBUG] Murf API key: {murf_key if murf_key else 'NOT_SET'}")
+            print(f"[DEBUG] TTS API key present: {bool(murf_key)}")
+            if not llm.is_available():
                 await self.message_queue.put({
                     "type": "llm_error",
                     "message": "AI service is not available",
                     "timestamp": datetime.now().isoformat()
                 })
                 return
-
-            # logger.info(f"Sending transcript to LLM: '{transcript[:50]}...'")
             print(f"[LLM] Processing: {transcript}")
-            
-            # Send start of streaming response
             await self.message_queue.put({
                 "type": "llm_response_start",
                 "message": "AI response starting...",
                 "timestamp": datetime.now().isoformat()
             })
-            
             accumulated_response = ""
             chunk_count = 0
-            
-            # Stream response from LLM
-            async for chunk in llm_service.generate_streaming_response(transcript, self.session_id):
+            async for chunk in llm.generate_streaming_response(transcript, self.session_id):
                 chunk_count += 1
                 accumulated_response += chunk
-                
-                # Send each chunk to the WebSocket
                 await self.message_queue.put({
                     "type": "llm_response_chunk",
                     "chunk": chunk,
@@ -236,35 +237,43 @@ class TurnDetectionWebSocketHandler:
                     "chunk_number": chunk_count,
                     "timestamp": datetime.now().isoformat()
                 })
-                
-                # Print to console as requested
-                # print(f"[LLM Chunk {chunk_count}] {chunk}", end="", flush=True)
-            
-            # Send completion notification
             await self.message_queue.put({
                 "type": "llm_response_complete",
                 "final_response": accumulated_response,
                 "total_chunks": chunk_count,
                 "timestamp": datetime.now().isoformat()
             })
-            
             print(f"\n[LLM] Complete response ({chunk_count} chunks): {accumulated_response}")
-            # logger.info(f"LLM streaming complete. Total chunks: {chunk_count}, Final length: {len(accumulated_response)}")
-
-            # Send accumulated LLM response to TTS service and print base64 audio
+            # TTS pipeline fix: check Murf API key before TTS
+            if not murf_key or not tts.is_available():
+                await self.message_queue.put({
+                    "type": "tts_error",
+                    "message": "TTS service is not available. Please check your Murf API key in settings.",
+                    "timestamp": datetime.now().isoformat()
+                })
+                print("[DEBUG] TTS not available: Murf API key missing or invalid.")
+                return
             try:
-                audio_b64 = await tts_service.generate_speech(accumulated_response)
-                # The tts_service function already prints the base64 audio to the console
-                # logger.info(f"Generated audio for LLM response (base64): {audio_b64[:100]}... (length: {len(audio_b64)})")
+                print(f"[DEBUG] Starting TTS generation for text: {accumulated_response[:50]}...")
+                print(f"[DEBUG] Using Murf API key: {tts.api_key[:10] if tts.api_key else 'None'}...")
+                audio_b64 = await tts.generate_speech(accumulated_response)
+                print(f"[DEBUG] TTS generation completed, audio length: {len(audio_b64) if audio_b64 else 0}")
                 if audio_b64:
                     await self.message_queue.put({
                         "type": "tts_response",
                         "audio": audio_b64,
                         "timestamp": datetime.now().isoformat()
                     })
+                    print("[DEBUG] TTS audio sent to client")
+                else:
+                    print("[DEBUG] TTS returned empty audio")
             except Exception as tts_exc:
-                # logger.error(f"Error sending LLM response to TTS service: {tts_exc}")
-                pass
+                print(f"[DEBUG] TTS error: {tts_exc}")
+                await self.message_queue.put({
+                    "type": "tts_error",
+                    "message": f"TTS service error: {tts_exc}",
+                    "timestamp": datetime.now().isoformat()
+                })
 
         except Exception as e:
             # logger.error(f"Error streaming LLM response: {e}")
@@ -278,7 +287,10 @@ class TurnDetectionWebSocketHandler:
         """Handle WebSocket commands"""
         if command == "start_recording":
             # logger.info("Starting turn detection recording session")
-            self.transcriber = AssemblyAIStreamingTranscriber(sample_rate=16000)
+            self.transcriber = AssemblyAIStreamingTranscriber(
+                sample_rate=16000, 
+                api_key=self.api_keys.get('assemblyai_api_key')
+            )
             if self.transcriber.start_streaming(self._on_transcript_received, self._on_turn_end):
                 await self._send_message({
                     "type": "status",
@@ -329,7 +341,15 @@ class TurnDetectionWebSocketHandler:
 
 async def websocket_endpoint(websocket: WebSocket):
     """Main WebSocket endpoint for turn detection"""
-    handler = TurnDetectionWebSocketHandler(websocket)
+    
+    # Initialize with empty API keys - client will send them via 'api_keys' message
+    api_keys = {
+        'assemblyai_api_key': None,
+        'google_api_key': None,
+        'murf_api_key': None
+    }
+    
+    handler = TurnDetectionWebSocketHandler(websocket, api_keys)
     
     try:
         await handler.connect()
@@ -343,6 +363,16 @@ async def websocket_endpoint(websocket: WebSocket):
                     # Handle text commands
                     try:
                         data = json.loads(message["text"])
+                        
+                        # Handle API keys message
+                        if data.get("type") == "api_keys":
+                            old_keys = handler.api_keys.copy()
+                            handler.api_keys.update(data.get("data", {}))
+                            print(f"[DEBUG] Updated API keys from client:")
+                            print(f"[DEBUG]  Old: {old_keys}")
+                            print(f"[DEBUG]  New: {handler.api_keys}")
+                            continue
+                        
                         command = data.get("command")
                         if command:
                             await handler.handle_command(command)
